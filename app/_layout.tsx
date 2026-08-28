@@ -10,10 +10,13 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import { Platform } from 'react-native';
+import { Platform, AppState, type AppStateStatus } from 'react-native';
 import { useEffect } from 'react';
 import * as DevClient from 'expo-dev-client';
+import * as SystemUI from 'expo-system-ui';
+import { StatusBar } from 'expo-status-bar';
 import { HeroUINativeProvider } from 'heroui-native';
+import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { Uniwind } from 'uniwind';
 import {
   ErrorBoundary as ExpoErrorBoundary,
@@ -26,6 +29,12 @@ import { initPostHog } from '@/lib/posthog';
 import { registerServiceWorker } from '@/lib/registerServiceWorker';
 import { reportErrorToParent } from '@/lib/reportPreviewError';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { SystemGate } from '@/components/SystemGate';
+import { BackButton } from '@/components/BackButton';
+import { BrandText } from '@/components/brand/BrandText';
+import { BRAND } from '@/lib/brand';
+import { usePushNotifications } from '@/lib/push';
+import { useSessionStore } from '@/lib/session';
 
 /**
  * Custom ErrorBoundary that reports React render errors to the parent window (Bilt preview iframe)
@@ -43,10 +52,20 @@ function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 export { ErrorBoundary };
 
-// Starter is light-only by default. Remove this when implementing requested dark mode.
+// 極貨網 is a light-only brand experience.
 Uniwind.setTheme('light');
 
 void SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    // Reads are pull-only, so a refetch when the app/tab regains focus is what
+    // keeps carts, orders and chats from going stale on a phone that never
+    // unmounts its screens. staleTime throttles the burst, gcTime drops caches
+    // no screen is watching so a long session stops growing in memory.
+    queries: { retry: 1, staleTime: 15_000, gcTime: 5 * 60_000, refetchOnWindowFocus: true },
+  },
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -55,6 +74,13 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  const init = useSessionStore((s) => s.init);
+
+  useEffect(() => init(), [init]);
+
+  // Registers the device for push and routes notification taps.
+  usePushNotifications();
 
   // Report uncaught JS errors and unhandled promise rejections to parent (Bilt preview iframe)
   useEffect(() => {
@@ -81,10 +107,8 @@ export default function RootLayout() {
   }, []);
 
   // Inject Google Fonts link tag for web to ensure fonts load through proxy
-  // Also register font family names as fallback if expo-font fails
   useEffect(() => {
     if (Platform.OS === 'web') {
-      // Check if link already exists
       const existingLink = document.querySelector(
         'link[href*="fonts.googleapis.com/css2?family=Inter"]',
       );
@@ -97,12 +121,6 @@ export default function RootLayout() {
         link.crossOrigin = 'anonymous';
         document.head.appendChild(link);
       }
-
-      // Note: The @import in global.css and the link tag above ensure Inter font loads
-      // expo-font will register the font family names (Inter_400Regular, etc.)
-      // If expo-font fails due to proxy issues, the fonts should still be available
-      // via the direct Google Fonts CDN link, though the specific font family names
-      // might not be registered. The app should still render with Inter font.
     }
   }, []);
 
@@ -128,6 +146,23 @@ export default function RootLayout() {
     registerServiceWorker();
   }, []);
 
+  // Keeps the window behind the React tree on brand background instead of
+  // system black/white, which shows through during rotation and overscroll.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    void SystemUI.setBackgroundColorAsync(BRAND.background);
+  }, []);
+
+  // React Query's focus detection is browser-only; on iOS/Android the app
+  // returning to the foreground is the equivalent signal.
+  useEffect(() => {
+    if (Platform.OS === 'web') return undefined;
+    const subscription = AppState.addEventListener('change', (status: AppStateStatus) => {
+      focusManager.setFocused(status === 'active');
+    });
+    return () => subscription.remove();
+  }, []);
+
   useEffect(() => {
     if (loaded || error) {
       void SplashScreen.hideAsync();
@@ -140,12 +175,74 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <HeroUINativeProvider>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ title: 'Habits', headerShown: false }} />
-        </Stack>
-        <InstallPrompt />
-      </HeroUINativeProvider>
+      {/* eslint-disable-next-line react/style-prop-object -- expo-status-bar's `style` is a string enum ('dark'/'light'), not a RN style object */}
+      <StatusBar style="dark" translucent />
+      <QueryClientProvider client={queryClient}>
+        <HeroUINativeProvider>
+          <SystemGate>
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: BRAND.white },
+                headerTitleStyle: { color: BRAND.navy, fontWeight: '600' },
+                headerTintColor: BRAND.navy,
+                headerShadowVisible: false,
+                headerLeft: () => <BackButton />,
+                contentStyle: { backgroundColor: BRAND.background },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="auth/sign-in" options={{ title: '登入 / 註冊' }} />
+              <Stack.Screen name="products/index" options={{ title: '商品列表' }} />
+              <Stack.Screen name="products/[id]" options={{ title: '商品詳情' }} />
+              <Stack.Screen name="store/[id]" options={{ title: '店鋪' }} />
+              <Stack.Screen name="checkout" options={{ title: '結帳' }} />
+              <Stack.Screen name="favorites" options={{ title: '我的收藏' }} />
+              <Stack.Screen name="orders/index" options={{ title: '我的訂單' }} />
+              <Stack.Screen name="orders/[id]" options={{ title: '訂單詳情' }} />
+              <Stack.Screen name="recently-viewed" options={{ title: '最近瀏覽' }} />
+              <Stack.Screen name="review/[productId]" options={{ title: '評價商品' }} />
+              <Stack.Screen name="notifications" options={{ title: '通知中心' }} />
+              <Stack.Screen name="messages/[id]" options={{ title: '聊天' }} />
+              <Stack.Screen name="profile/edit" options={{ title: '編輯個人資料' }} />
+              <Stack.Screen name="profile/delete" options={{ title: '刪除帳號' }} />
+              {/* 賣家分頁（市集／首頁／訂單／訊息／我的）是 app/seller/(tabs) 這個
+                  巢狀分頁導覽，跟買家 (tabs) 一樣：畫面留在記憶體裡，切分頁不重新掛載，
+                  底部導覽與頁首在載入資料時不會消失。網址仍然是 /seller、/seller/orders…。 */}
+              <Stack.Screen name="seller/(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="seller/onboarding"
+                options={{
+                  title: '成為極貨網賣家',
+                  // 品牌名不能被瀏覽器翻譯，所以標題自己畫（沿用 headerTitleStyle 的樣式）。
+                  headerTitle: () => (
+                    <BrandText
+                      numberOfLines={1}
+                      style={{ fontSize: 17, fontWeight: '600', color: BRAND.navy }}
+                    >
+                      成為極貨網賣家
+                    </BrandText>
+                  ),
+                }}
+              />
+              <Stack.Screen name="seller/products" options={{ title: '商品管理' }} />
+              <Stack.Screen name="seller/analytics" options={{ title: '銷售分析' }} />
+              <Stack.Screen name="seller/reviews" options={{ title: '買家評價與回覆' }} />
+              <Stack.Screen name="seller/new-product" options={{ title: '新增商品' }} />
+              <Stack.Screen name="seller/edit/[id]" options={{ title: '編輯商品' }} />
+              <Stack.Screen name="seller/coins" options={{ title: 'J幣中心' }} />
+              <Stack.Screen name="seller/coupons" options={{ title: '優惠券' }} />
+              <Stack.Screen name="seller/promote" options={{ title: '兌換推廣' }} />
+              <Stack.Screen name="seller/store" options={{ title: '店鋪設定' }} />
+              <Stack.Screen name="admin/index" options={{ title: '平台管理' }} />
+              <Stack.Screen name="admin/logistics" options={{ title: '物流串接設定' }} />
+              <Stack.Screen name="legal/privacy" options={{ title: '隱私權政策' }} />
+              <Stack.Screen name="legal/terms" options={{ title: '服務條款' }} />
+              <Stack.Screen name="support/contact" options={{ title: '聯絡我們' }} />
+            </Stack>
+          </SystemGate>
+          <InstallPrompt />
+        </HeroUINativeProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }

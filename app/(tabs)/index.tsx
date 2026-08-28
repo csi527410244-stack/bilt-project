@@ -1,27 +1,17 @@
-import { Stack } from 'expo-router';
-import { Text } from 'heroui-native';
-import { View } from 'react-native';
+import { ScreenScaffold } from '@/components/ScreenScaffold';
 
-export default function Home() {
-  return <ScreenContent />;
-}
-
-function ScreenContent() {
+export default function HomeScreen() {
   return (
-    <View className="bg-background p-safe flex basis-full flex-col">
-      <Stack.Screen
-        options={{
-          title: 'Home',
-        }}
-      />
-      <View className="flex-1 items-center justify-center">
-        <Text.Heading type="h2" align="center" className="mb-4">
-          Welcome to Your App
-        </Text.Heading>
-        <Text.Paragraph align="center" color="muted">
-          This is your starting point. Start building something amazing!
-        </Text.Paragraph>
-      </View>
-    </View>
+    <ScreenScaffold
+      title="首頁"
+      subtitle="極貨網買家入口：搜尋、輪播、分類捷徑與推薦商品。"
+      sections={[
+        '搜尋列與掃描入口',
+        '主視覺輪播與活動banner',
+        '分類捷徑',
+        '限時特賣與推薦商品',
+        '最近瀏覽捷徑',
+      ]}
+    />
   );
 }

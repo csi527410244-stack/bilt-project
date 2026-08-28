@@ -1,10 +1,13 @@
-import { Home, LayoutGrid, MessageCircle, ShoppingCart, User } from 'lucide-react-native';
-import { Tabs } from 'expo-router';
+import { LayoutDashboard, MessageCircle, ClipboardList, Store, User } from 'lucide-react-native';
+import { router, Tabs } from 'expo-router';
 
-import { BrandText } from '@/components/brand/BrandText';
 import { BRAND } from '@/lib/brand';
 
-export default function TabLayout() {
+/**
+ * 賣家分頁導覽。畫面留在記憶體裡，切分頁不重新掛載，
+ * 底部導覽與頁首在載入資料時不會消失。
+ */
+export default function SellerTabLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -23,38 +26,40 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
+        name="marketplace"
+        options={{
+          title: '市集',
+          tabBarLabel: '市集',
+          tabBarIcon: ({ color, size }) => <Store color={color} size={size ?? 24} />,
+        }}
+        listeners={{
+          // 「市集」不是賣家畫面，而是切回買家端。
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace('/');
+          },
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
-          // 品牌名不能被瀏覽器翻譯，所以標題自己畫。
-          headerTitle: () => (
-            <BrandText style={{ fontSize: 17, fontWeight: '600', color: BRAND.navy }}>
-              {BRAND.name}
-            </BrandText>
-          ),
+          title: '賣家中心',
           tabBarLabel: '首頁',
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size ?? 24} />,
+          tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size ?? 24} />,
         }}
       />
       <Tabs.Screen
-        name="categories"
+        name="orders"
         options={{
-          title: '分類',
-          tabBarLabel: '分類',
-          tabBarIcon: ({ color, size }) => <LayoutGrid color={color} size={size ?? 24} />,
-        }}
-      />
-      <Tabs.Screen
-        name="cart"
-        options={{
-          title: '購物車',
-          tabBarLabel: '購物車',
-          tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size ?? 24} />,
+          title: '賣家訂單',
+          tabBarLabel: '訂單',
+          tabBarIcon: ({ color, size }) => <ClipboardList color={color} size={size ?? 24} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: '訊息',
+          title: '買家訊息',
           tabBarLabel: '訊息',
           tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size ?? 24} />,
         }}
@@ -62,7 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: '我的',
+          title: '賣家帳號',
           tabBarLabel: '我的',
           tabBarIcon: ({ color, size }) => <User color={color} size={size ?? 24} />,
         }}

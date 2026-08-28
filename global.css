@@ -37,4 +37,82 @@
  * }
  */
 
+/*
+ * 極貨網 theme — deep navy primary with a gold highlight for coins/promos.
+ * Declared in both light and dark variants so Expo Go/native picks the brand
+ * accent from the active theme table (the app itself is locked to light in
+ * app/_layout.tsx). Keep these values in sync with lib/brand.ts.
+ */
+@layer theme {
+  :root {
+    @variant light {
+      --background: oklch(0.9702 0.0045 264);
+      --foreground: oklch(0.2818 0.0684 264);
+
+      --surface: var(--white);
+      --surface-secondary: oklch(0.9636 0.0057 264);
+      --surface-tertiary: oklch(0.9448 0.0072 264);
+
+      --muted: oklch(0.6108 0.0324 264);
+      --border: oklch(0.9198 0.0111 264);
+      --separator: oklch(0.8551 0.0159 264);
+
+      --accent: oklch(0.2818 0.0684 264);
+      --accent-foreground: var(--snow);
+
+      --success: oklch(0.6115 0.1244 158);
+      --success-foreground: var(--snow);
+
+      --warning: oklch(0.7663 0.1301 72);
+      --warning-foreground: var(--eclipse);
+
+      --danger: oklch(0.5817 0.1786 25);
+      --danger-foreground: var(--snow);
+
+      --focus: var(--accent);
+      --link: var(--accent);
+    }
+
+    @variant dark {
+      --background: oklch(0.9702 0.0045 264);
+      --foreground: oklch(0.2818 0.0684 264);
+
+      --surface: var(--white);
+      --surface-secondary: oklch(0.9636 0.0057 264);
+      --surface-tertiary: oklch(0.9448 0.0072 264);
+
+      --muted: oklch(0.6108 0.0324 264);
+      --border: oklch(0.9198 0.0111 264);
+      --separator: oklch(0.8551 0.0159 264);
+
+      --accent: oklch(0.2818 0.0684 264);
+      --accent-foreground: var(--snow);
+
+      --success: oklch(0.6115 0.1244 158);
+      --success-foreground: var(--snow);
+
+      --warning: oklch(0.7663 0.1301 72);
+      --warning-foreground: var(--eclipse);
+
+      --danger: oklch(0.5817 0.1786 25);
+      --danger-foreground: var(--snow);
+
+      --focus: var(--accent);
+      --link: var(--accent);
+    }
+  }
+}
+
+/* Brand utilities: bg-brand-navy, text-brand-gold, border-brand-border, ... */
+@theme {
+  --color-brand-navy: oklch(0.2818 0.0684 264);
+  --color-brand-navy-soft: oklch(0.4293 0.0561 264);
+  --color-brand-gold: oklch(0.7663 0.1301 72);
+  --color-brand-background: oklch(0.9702 0.0045 264);
+  --color-brand-border: oklch(0.9198 0.0111 264);
+  --color-brand-muted: oklch(0.6108 0.0324 264);
+  --color-brand-success: oklch(0.6115 0.1244 158);
+  --color-brand-danger: oklch(0.5817 0.1786 25);
+}
+
 @source './node_modules/heroui-native/lib';
