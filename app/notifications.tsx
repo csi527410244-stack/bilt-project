@@ -5,7 +5,6 @@ import { useBrandToast } from '@/components/brand/BrandToast';
 import {
   BellRing,
   CheckCircle2,
-  ChevronLeft,
   LifeBuoy,
   Megaphone,
   MessageCircle,
@@ -21,6 +20,7 @@ import {
 
 import { EmptyState } from '@/components/EmptyState';
 import { PushDiagnosticsCard } from '@/components/PushDiagnosticsCard';
+import { ScreenBackButton } from '@/components/ScreenBackButton';
 import { SignInRequired } from '@/components/SignInRequired';
 import { SwipeToDelete } from '@/components/SwipeToDelete';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -33,7 +33,6 @@ import {
 } from '@/lib/api/social';
 import { BRAND } from '@/lib/brand';
 import { relativeTime } from '@/lib/format';
-import { goBackOrReplace } from '@/lib/navigation';
 import { openNotificationLink } from '@/lib/push';
 import { setAppBadgeCount } from '@/lib/pushToken';
 import { useUserId } from '@/lib/session';
@@ -151,24 +150,7 @@ export default function NotificationsScreen() {
     <View className="bg-background flex-1">
       <View className="bg-surface gap-2 px-4 py-3">
         <View className="flex-row items-center gap-2">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="返回"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="-ml-1 py-1"
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.55 : 1,
-              ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
-            })}
-            onPress={() => goBackOrReplace('/(tabs)')}
-          >
-            <View className="flex-row items-center gap-0.5">
-              <ChevronLeft size={20} color={BRAND.navy} />
-              <Typography type="body-sm" className="text-navy" style={{ fontWeight: '600' }}>
-                返回
-              </Typography>
-            </View>
-          </Pressable>
+          <ScreenBackButton />
 
           <View className="flex-1" />
 

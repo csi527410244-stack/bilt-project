@@ -38,6 +38,9 @@ export default function TabLayout() {
   return (
     <SwipeBackArea onBack={onSwipeBack} enabled={pathname !== '/'}>
       <Tabs
+        // 返回 = 回到剛才看的那個分頁。預設的 'firstRoute' 會讓任何分頁的返回鍵
+        // 與返回手勢一律跳回首頁，這裡改成照瀏覽順序退。
+        backBehavior="history"
         screenOptions={{
           headerShown: false,
           // 切分頁不做轉場動畫，點下去就換頁。

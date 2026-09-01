@@ -24,6 +24,9 @@ export default function SellerTabsLayout() {
     <SwipeBackArea onBack={onSwipeBack} enabled={pathname !== '/seller'}>
       <Tabs
         tabBar={renderTabBar}
+        // 返回 = 回到剛才看的那個分頁（例如「我的」→ 訂單管理 → 返回會回到「我的」）。
+        // 預設的 'firstRoute' 會一律跳回賣家首頁。
+        backBehavior="history"
         screenOptions={{
           headerShown: false,
           // 切分頁不做轉場動畫，點下去就換頁。
