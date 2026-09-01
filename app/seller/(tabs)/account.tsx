@@ -35,23 +35,45 @@ import { useSessionStore, useUserId } from '@/lib/session';
 import { COIN_NAME } from '@/lib/types';
 
 /**
- * 賣家中心的一列入口。每一列自己就是一張卡（彼此之間留間距），字級與圖示塊都比
- * 一般清單大一號 —— 賣家最常按的就是這幾個入口。
+ * 每一個管理入口自己的配色：圖示色 + 圖示底色。單一藍色的清單很難掃讀，
+ * 所以每一列給一個固定色相，位置與顏色一起記。
+ */
+const ROW_TINT = {
+  product: { icon: BRAND.blue, soft: BRAND.blueSoft },
+  order: { icon: BRAND.orange, soft: BRAND.orangeSoft },
+  coupon: { icon: '#F2497D', soft: '#FFE7EF' },
+  analytics: { icon: '#6D5AE6', soft: '#ECE9FF' },
+  review: { icon: '#F5A524', soft: '#FFF4DC' },
+  promote: { icon: '#FB5A5A', soft: '#FFE9E9' },
+  store: { icon: '#00A6A6', soft: '#DFF5F5' },
+  profile: { icon: '#5B6CFF', soft: '#E8EBFF' },
+  support: { icon: '#16A34A', soft: '#E3F7EA' },
+  signOut: { icon: BRAND.danger, soft: '#FDE8E6' },
+} as const;
+
+type RowTint = keyof typeof ROW_TINT;
+
+/**
+ * 賣家中心的一列入口。每一列自己就是一張卡（彼此之間留間距），圖示帶自己的色系，
+ * 字級收斂成手機上好讀的大小。
  */
 function MenuRow({
-  icon,
+  icon: Icon,
   title,
+  tint,
   onPress,
   danger = false,
 }: {
-  icon: ReactNode;
+  icon: typeof Package;
   title: string;
+  tint: RowTint;
   onPress: () => void;
   danger?: boolean;
 }) {
+  const { icon: iconColor, soft } = ROW_TINT[tint];
   return (
     <Pressable
-      className="bg-surface mx-4 mt-2.5 flex-row items-center gap-3 rounded-2xl px-4 py-4"
+      className="bg-surface mx-4 mt-2 flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
       accessibilityRole="button"
       accessibilityLabel={title}
       style={({ pressed }) => ({
@@ -60,16 +82,19 @@ function MenuRow({
       })}
       onPress={onPress}
     >
-      <View className="bg-brand-blue-soft h-10 w-10 items-center justify-center rounded-xl">
-        {icon}
+      <View
+        className="h-9 w-9 items-center justify-center rounded-xl"
+        style={{ backgroundColor: soft }}
+      >
+        <Icon size={18} color={iconColor} />
       </View>
       <Typography
         className={danger ? 'text-danger flex-1' : 'text-navy flex-1'}
-        style={{ fontSize: 16, lineHeight: 21, fontWeight: '700' }}
+        style={{ fontSize: 14, lineHeight: 19, fontWeight: '600' }}
       >
         {title}
       </Typography>
-      <ChevronRight size={20} color={BRAND.muted} />
+      <ChevronRight size={17} color={BRAND.muted} />
     </Pressable>
   );
 }
@@ -92,10 +117,10 @@ function AccountHeader({ children }: { children: ReactNode }) {
 function StoreThumbFallback() {
   return (
     <View
-      className="h-14 w-14 items-center justify-center rounded-2xl"
+      className="h-12 w-12 items-center justify-center rounded-2xl"
       style={{ backgroundColor: BRAND.blueSoft }}
     >
-      <StoreIcon size={24} color={BRAND.blue} />
+      <StoreIcon size={22} color={BRAND.blue} />
     </View>
   );
 }
@@ -161,7 +186,7 @@ export default function SellerAccountScreen() {
       <ScrollView className="flex-1" contentContainerClassName="pb-8">
         <AccountHeader>
           {store.logo_url ? (
-            <AppImage uri={store.logo_url} className="h-14 w-14 rounded-2xl" />
+            <AppImage uri={store.logo_url} className="h-12 w-12 rounded-2xl" />
           ) : (
             <StoreThumbFallback />
           )}
@@ -169,14 +194,14 @@ export default function SellerAccountScreen() {
             <Typography
               numberOfLines={1}
               className="text-navy"
-              style={{ fontSize: 18, lineHeight: 24, fontWeight: '700' }}
+              style={{ fontSize: 16, lineHeight: 21, fontWeight: '700' }}
             >
               {store.name}
             </Typography>
             <Typography
               color="muted"
               numberOfLines={1}
-              style={{ fontSize: 13, lineHeight: 18, fontWeight: '500' }}
+              style={{ fontSize: 12, lineHeight: 16, fontWeight: '500' }}
             >
               評價 {store.rating.toFixed(1)}（{formatNumber(store.rating_count)}）
             </Typography>
@@ -186,7 +211,7 @@ export default function SellerAccountScreen() {
             accessibilityLabel="店鋪設定"
             onPress={() => router.push('/seller/store')}
           >
-            <Settings size={22} color={BRAND.navy} />
+            <Settings size={20} color={BRAND.navy} />
           </Pressable>
         </AccountHeader>
 
@@ -209,7 +234,7 @@ export default function SellerAccountScreen() {
               <Typography
                 numberOfLines={1}
                 className="text-navy"
-                style={{ fontSize: 22, lineHeight: 29, fontWeight: '700' }}
+                style={{ fontSize: 18, lineHeight: 24, fontWeight: '700' }}
               >
                 {formatPrice(stats.monthRevenue ?? 0)}
               </Typography>
@@ -230,7 +255,7 @@ export default function SellerAccountScreen() {
               <Typography
                 numberOfLines={1}
                 className="text-navy text-right"
-                style={{ fontSize: 22, lineHeight: 29, fontWeight: '700' }}
+                style={{ fontSize: 18, lineHeight: 24, fontWeight: '700' }}
               >
                 {formatNumber(stats.productCount ?? 0)} / {formatNumber(stats.pendingOrders ?? 0)}
               </Typography>
@@ -255,10 +280,10 @@ export default function SellerAccountScreen() {
             end={{ x: 1, y: 0 }}
             className="flex-row items-center justify-center gap-2 py-4"
           >
-            <Plus size={22} color={BRAND.white} strokeWidth={2.8} />
+            <Plus size={19} color={BRAND.white} strokeWidth={2.8} />
             <Typography
               className="text-white"
-              style={{ fontSize: 17, lineHeight: 22, fontWeight: '700' }}
+              style={{ fontSize: 15, lineHeight: 20, fontWeight: '700' }}
             >
               新增商品
             </Typography>
@@ -270,10 +295,10 @@ export default function SellerAccountScreen() {
           onPress={() => router.push('/seller/coins')}
         >
           <View
-            className="h-10 w-10 items-center justify-center rounded-xl"
+            className="h-9 w-9 items-center justify-center rounded-xl"
             style={{ backgroundColor: BRAND.orangeSoft }}
           >
-            <Coins size={19} color={BRAND.orange} />
+            <Coins size={18} color={BRAND.orange} />
           </View>
           <View className="flex-1">
             <Typography type="body-xs" color="muted">
@@ -282,7 +307,7 @@ export default function SellerAccountScreen() {
             </Typography>
             <Typography
               className="text-navy"
-              style={{ fontSize: 20, lineHeight: 26, fontWeight: '700' }}
+              style={{ fontSize: 17, lineHeight: 23, fontWeight: '700' }}
             >
               {formatNumber(coins?.wallet.balance ?? 0)}
             </Typography>
@@ -302,37 +327,44 @@ export default function SellerAccountScreen() {
         </Pressable>
 
         <MenuRow
-          icon={<Package size={20} color={BRAND.blue} />}
+          icon={Package}
+          tint="product"
           title="商品管理"
           onPress={() => router.push('/seller/products')}
         />
         <MenuRow
-          icon={<Receipt size={20} color={BRAND.blue} />}
+          icon={Receipt}
+          tint="order"
           title="訂單管理"
           onPress={() => router.navigate('/seller/orders')}
         />
         <MenuRow
-          icon={<Ticket size={20} color={BRAND.blue} />}
+          icon={Ticket}
+          tint="coupon"
           title="優惠券與折扣碼"
           onPress={() => router.push('/seller/coupons')}
         />
         <MenuRow
-          icon={<BarChart3 size={20} color={BRAND.blue} />}
+          icon={BarChart3}
+          tint="analytics"
           title="銷售分析"
           onPress={() => router.push('/seller/analytics')}
         />
         <MenuRow
-          icon={<Star size={20} color={BRAND.blue} />}
+          icon={Star}
+          tint="review"
           title="買家評價與回覆"
           onPress={() => router.push('/seller/reviews')}
         />
         <MenuRow
-          icon={<Megaphone size={20} color={BRAND.blue} />}
+          icon={Megaphone}
+          tint="promote"
           title="推廣中心"
           onPress={() => router.push('/seller/promote')}
         />
         <MenuRow
-          icon={<StoreIcon size={20} color={BRAND.blue} />}
+          icon={StoreIcon}
+          tint="store"
           title="店鋪與出貨設定"
           onPress={() => router.push('/seller/store')}
         />
@@ -349,13 +381,17 @@ export default function SellerAccountScreen() {
           onPress={exitSellerMode}
         >
           <View
-            className="h-10 w-10 items-center justify-center rounded-xl"
+            className="h-9 w-9 items-center justify-center rounded-xl"
             style={{ backgroundColor: BRAND.orangeSoft }}
           >
-            <Repeat size={19} color={BRAND.orange} />
+            <Repeat size={18} color={BRAND.orange} />
           </View>
           <View className="flex-1">
-            <Typography type="body" className="text-navy" style={{ fontWeight: '700' }}>
+            <Typography
+              type="body-sm"
+              className="text-navy"
+              style={{ fontWeight: '600', fontSize: 14, lineHeight: 19 }}
+            >
               回到買家介面
             </Typography>
             <Typography type="body-xs" color="muted" numberOfLines={1}>
@@ -385,17 +421,20 @@ export default function SellerAccountScreen() {
           </View>
         </View>
         <MenuRow
-          icon={<UserCog size={20} color={BRAND.blue} />}
+          icon={UserCog}
+          tint="profile"
           title="編輯個人資料"
           onPress={() => router.push('/profile/edit')}
         />
         <MenuRow
-          icon={<LifeBuoy size={20} color={BRAND.blue} />}
+          icon={LifeBuoy}
+          tint="support"
           title="聯絡我們"
           onPress={() => router.push('/support/contact')}
         />
         <MenuRow
-          icon={<LogOut size={20} color={BRAND.blue} />}
+          icon={LogOut}
+          tint="signOut"
           title="登出"
           danger
           onPress={() => {
