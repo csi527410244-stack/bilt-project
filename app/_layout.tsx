@@ -188,6 +188,10 @@ export default function RootLayout() {
                 headerShadowVisible: false,
                 headerLeft: () => <BackButton />,
                 contentStyle: { backgroundColor: BRAND.background },
+                // 推入的畫面（商品、訂單、賣家設定…）一律可以從左緣往右滑返回。
+                // iOS 本來就有，Android 預設關閉，所以在這裡一起打開。
+                gestureEnabled: true,
+                gestureDirection: 'horizontal',
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

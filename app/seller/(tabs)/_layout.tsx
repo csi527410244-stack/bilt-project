@@ -1,7 +1,10 @@
-import { Tabs } from 'expo-router';
+import { useCallback } from 'react';
+import { Tabs, usePathname } from 'expo-router';
 
 import { SellerTabBar } from '@/components/SellerTabBar';
+import { SwipeBackArea } from '@/components/SwipeBackArea';
 import { BRAND } from '@/lib/brand';
+import { goBackOrReplace } from '@/lib/navigation';
 
 /** 自訂分頁列（市集／首頁／發布／訂單／訊息／我的），發布不是分頁而是推入的頁面。 */
 const renderTabBar = () => <SellerTabBar />;
@@ -13,24 +16,30 @@ const renderTabBar = () => <SellerTabBar />;
  * 檔案是群組目錄 (tabs)，所以網址仍然是 /seller、/seller/market、/seller/orders…
  */
 export default function SellerTabsLayout() {
+  // 從螢幕左緣往右滑 = 返回（賣家首頁是落點，沒有可返回的地方）。
+  const pathname = usePathname();
+  const onSwipeBack = useCallback(() => goBackOrReplace('/seller'), []);
+
   return (
-    <Tabs
-      tabBar={renderTabBar}
-      screenOptions={{
-        headerShown: false,
-        // 切分頁不做轉場動畫，點下去就換頁。
-        animation: 'none',
-        // 沒在看的分頁停止重新渲染：訊息與訂單是輪詢來的，沒有這個設定時每次輪詢
-        // 都會讓所有已載入的分頁一起重繪，點分頁列就會有延遲感。
-        freezeOnBlur: true,
-        sceneStyle: { backgroundColor: BRAND.background },
-      }}
-    >
-      {/* index 放第一個：它是這個群組的預設落點（/seller）。賣家首頁直接顯示買家的 MarketHome。 */}
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="orders" />
-      <Tabs.Screen name="messages" />
-      <Tabs.Screen name="account" />
-    </Tabs>
+    <SwipeBackArea onBack={onSwipeBack} enabled={pathname !== '/seller'}>
+      <Tabs
+        tabBar={renderTabBar}
+        screenOptions={{
+          headerShown: false,
+          // 切分頁不做轉場動畫，點下去就換頁。
+          animation: 'none',
+          // 沒在看的分頁停止重新渲染：訊息與訂單是輪詢來的，沒有這個設定時每次輪詢
+          // 都會讓所有已載入的分頁一起重繪，點分頁列就會有延遲感。
+          freezeOnBlur: true,
+          sceneStyle: { backgroundColor: BRAND.background },
+        }}
+      >
+        {/* index 放第一個：它是這個群組的預設落點（/seller）。賣家首頁直接顯示買家的 MarketHome。 */}
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="orders" />
+        <Tabs.Screen name="messages" />
+        <Tabs.Screen name="account" />
+      </Tabs>
+    </SwipeBackArea>
   );
 }

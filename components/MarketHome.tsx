@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { Button, SearchField, Typography } from 'heroui-native';
 import { router } from 'expo-router';
-import { Bell, ChevronRight, LayoutGrid, ShoppingCart, AlertCircle } from 'lucide-react-native';
+import {
+  Bell,
+  ChevronRight,
+  LayoutGrid,
+  ShoppingCart,
+  AlertCircle,
+  Sparkles,
+} from 'lucide-react-native';
 
 import { AdCarousel } from '@/components/AdCarousel';
 import { CategoryIcon } from '@/components/CategoryIcon';
@@ -261,12 +268,15 @@ export function MarketHome({ showLaunchAd = true }: Props) {
           </LinearGradient>
         </View>
 
-        {/* 非對稱砌體布局: 1 大左 + 2 小右 + 全部分類 */}
+        {/* 分類捷徑：左邊一張精選大卡，右邊兩個主分類（圖示配文字橫排，窄螢幕也不會擠），
+            第二排三個分類 + 橘色全部分類。圖示放進淺色圓底、字級加大，看起來乾淨一點。 */}
         <View className="mt-4 px-4">
-          <View className="flex-row gap-3" style={{ height: 140 }}>
-            {/* 左側大瓷磚 - 促銷文本 */}
+          <View className="flex-row gap-3" style={{ height: 132 }}>
+            {/* 左側大瓷磚 - 促銷入口 */}
             <Pressable
-              className="bg-brand-blue flex-1 items-start justify-between rounded-2xl p-4"
+              className="bg-brand-blue flex-1 items-start justify-between rounded-3xl p-4"
+              accessibilityRole="button"
+              accessibilityLabel="精選推薦"
               style={{
                 shadowColor: BRAND.blue,
                 shadowOffset: { width: 0, height: 2 },
@@ -276,25 +286,34 @@ export function MarketHome({ showLaunchAd = true }: Props) {
               }}
               onPress={() => router.push('/products')}
             >
-              <Typography type="body-sm" className="text-white" style={{ fontWeight: '600' }}>
-                🎯 精選推薦
-              </Typography>
-              <Typography
-                type="body-xs"
-                className="text-white/85"
-                numberOfLines={2}
-                style={{ fontWeight: '500' }}
-              >
-                發現優質商品
-              </Typography>
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-white/20">
+                <Sparkles size={18} color={BRAND.white} />
+              </View>
+              <View>
+                <Typography
+                  className="text-white"
+                  style={{ fontSize: 16, lineHeight: 21, fontWeight: '700' }}
+                >
+                  精選推薦
+                </Typography>
+                <Typography
+                  numberOfLines={1}
+                  className="text-white/85"
+                  style={{ fontSize: 13, lineHeight: 18, fontWeight: '500' }}
+                >
+                  發現優質商品
+                </Typography>
+              </View>
             </Pressable>
 
-            {/* 右側小瓷磚 - 前 2 個類別 */}
+            {/* 右側兩個主分類 */}
             <View className="flex-1 flex-col gap-3">
               {(categories ?? []).slice(0, 2).map((category) => (
                 <Pressable
                   key={category.id}
-                  className="bg-surface flex-1 items-center justify-center rounded-2xl p-3"
+                  className="bg-surface flex-1 flex-row items-center gap-2.5 rounded-3xl px-3.5"
+                  accessibilityRole="button"
+                  accessibilityLabel={category.name}
                   style={{
                     shadowColor: BRAND.blue,
                     shadowOffset: { width: 0, height: 2 },
@@ -309,12 +328,13 @@ export function MarketHome({ showLaunchAd = true }: Props) {
                     })
                   }
                 >
-                  <CategoryIcon name={category.icon} size={24} color={BRAND.navy} />
+                  <View className="bg-brand-blue-soft h-9 w-9 items-center justify-center rounded-full">
+                    <CategoryIcon name={category.icon} size={18} color={BRAND.blue} />
+                  </View>
                   <Typography
-                    type="body-xs"
-                    className="text-navy mt-2 text-center"
                     numberOfLines={1}
-                    style={{ fontWeight: '600' }}
+                    className="text-navy flex-1"
+                    style={{ fontSize: 15, lineHeight: 20, fontWeight: '600' }}
                   >
                     {category.name}
                   </Typography>
@@ -328,7 +348,9 @@ export function MarketHome({ showLaunchAd = true }: Props) {
             {(categories ?? []).slice(2, 5).map((category) => (
               <Pressable
                 key={category.id}
-                className="bg-surface flex-1 items-center justify-center rounded-xl px-1.5 py-2.5"
+                className="bg-surface flex-1 items-center justify-center rounded-2xl px-1 py-3"
+                accessibilityRole="button"
+                accessibilityLabel={category.name}
                 style={{
                   shadowColor: BRAND.blue,
                   shadowOffset: { width: 0, height: 1 },
@@ -343,12 +365,13 @@ export function MarketHome({ showLaunchAd = true }: Props) {
                   })
                 }
               >
-                <CategoryIcon name={category.icon} size={20} color={BRAND.navy} />
+                <View className="bg-brand-blue-soft h-9 w-9 items-center justify-center rounded-full">
+                  <CategoryIcon name={category.icon} size={18} color={BRAND.blue} />
+                </View>
                 <Typography
-                  type="body-xs"
-                  className="text-navy mt-1 text-center"
                   numberOfLines={1}
-                  style={{ fontWeight: '500' }}
+                  className="text-navy mt-1.5 text-center"
+                  style={{ fontSize: 12, lineHeight: 16, fontWeight: '600' }}
                 >
                   {category.name}
                 </Typography>
@@ -356,7 +379,9 @@ export function MarketHome({ showLaunchAd = true }: Props) {
             ))}
             {/* 全部分類快捷按鈕 */}
             <Pressable
-              className="bg-brand-orange flex-1 items-center justify-center rounded-xl px-1.5 py-2.5"
+              className="bg-brand-orange flex-1 items-center justify-center rounded-2xl px-1 py-3"
+              accessibilityRole="button"
+              accessibilityLabel="全部分類"
               style={{
                 shadowColor: BRAND.orange,
                 shadowOffset: { width: 0, height: 1 },
@@ -366,11 +391,13 @@ export function MarketHome({ showLaunchAd = true }: Props) {
               }}
               onPress={() => router.push('/(tabs)/categories')}
             >
-              <LayoutGrid size={20} color={BRAND.white} />
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-white/25">
+                <LayoutGrid size={18} color={BRAND.white} />
+              </View>
               <Typography
-                type="body-xs"
-                className="mt-1 text-center text-white"
-                style={{ fontWeight: '600' }}
+                numberOfLines={1}
+                className="mt-1.5 text-center text-white"
+                style={{ fontSize: 12, lineHeight: 16, fontWeight: '600' }}
               >
                 全部分類
               </Typography>

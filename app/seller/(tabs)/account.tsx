@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Linking, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { Avatar, Button, Spinner, Typography } from 'heroui-native';
 import { router } from 'expo-router';
 import {
@@ -34,6 +34,10 @@ import { exitSellerMode } from '@/lib/mode';
 import { useSessionStore, useUserId } from '@/lib/session';
 import { COIN_NAME } from '@/lib/types';
 
+/**
+ * 賣家中心的一列入口。每一列自己就是一張卡（彼此之間留間距），字級與圖示塊都比
+ * 一般清單大一號 —— 賣家最常按的就是這幾個入口。
+ */
 function MenuRow({
   icon,
   title,
@@ -46,14 +50,26 @@ function MenuRow({
   danger?: boolean;
 }) {
   return (
-    <Pressable className="flex-row items-center gap-3 px-4 py-3.5" onPress={onPress}>
-      <View className="bg-brand-blue-soft h-9 w-9 items-center justify-center rounded-xl">
+    <Pressable
+      className="bg-surface mx-4 mt-2.5 flex-row items-center gap-3 rounded-2xl px-4 py-4"
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.9 : 1,
+        ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+      })}
+      onPress={onPress}
+    >
+      <View className="bg-brand-blue-soft h-10 w-10 items-center justify-center rounded-xl">
         {icon}
       </View>
-      <Typography type="body" className={danger ? 'text-danger flex-1' : 'text-navy flex-1'}>
+      <Typography
+        className={danger ? 'text-danger flex-1' : 'text-navy flex-1'}
+        style={{ fontSize: 16, lineHeight: 21, fontWeight: '700' }}
+      >
         {title}
       </Typography>
-      <ChevronRight size={18} color={BRAND.muted} />
+      <ChevronRight size={20} color={BRAND.muted} />
     </Pressable>
   );
 }
@@ -151,14 +167,17 @@ export default function SellerAccountScreen() {
           )}
           <View className="flex-1">
             <Typography
-              type="h5"
               numberOfLines={1}
               className="text-navy"
-              style={{ fontWeight: '700' }}
+              style={{ fontSize: 18, lineHeight: 24, fontWeight: '700' }}
             >
               {store.name}
             </Typography>
-            <Typography type="body-xs" color="muted" numberOfLines={1}>
+            <Typography
+              color="muted"
+              numberOfLines={1}
+              style={{ fontSize: 13, lineHeight: 18, fontWeight: '500' }}
+            >
               評價 {store.rating.toFixed(1)}（{formatNumber(store.rating_count)}）
             </Typography>
           </View>
@@ -171,29 +190,52 @@ export default function SellerAccountScreen() {
           </Pressable>
         </AccountHeader>
 
-        {/* 本月營收：點進去是綠界廠商後台，款項與對帳都在那裡看。 */}
+        {/* 左邊點進銷售分析、右邊點進訂單管理 —— 兩個都是站內頁面，不會把人丟到綠界首頁。 */}
         {!statsLoading && stats ? (
-          <Pressable
-            className="bg-surface mx-4 mt-3 flex-row items-center justify-between gap-3 rounded-2xl px-4 py-3.5"
-            onPress={() => Linking.openURL('https://ecpay.com.tw')}
-          >
-            <View>
+          <View className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-4">
+            <Pressable
+              className="flex-1"
+              accessibilityRole="button"
+              accessibilityLabel="查看銷售分析"
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.6 : 1,
+                ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+              })}
+              onPress={() => router.push('/seller/analytics')}
+            >
               <Typography type="body-xs" color="muted">
                 本月營收
               </Typography>
-              <Typography type="h6" className="text-navy" style={{ fontWeight: '700' }}>
+              <Typography
+                numberOfLines={1}
+                className="text-navy"
+                style={{ fontSize: 22, lineHeight: 29, fontWeight: '700' }}
+              >
                 {formatPrice(stats.monthRevenue ?? 0)}
               </Typography>
-            </View>
-            <View className="items-end">
+            </Pressable>
+            <Pressable
+              className="items-end"
+              accessibilityRole="button"
+              accessibilityLabel="查看待處理訂單"
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.6 : 1,
+                ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+              })}
+              onPress={() => router.navigate('/seller/orders')}
+            >
               <Typography type="body-xs" color="muted">
                 商品 / 待處理訂單
               </Typography>
-              <Typography type="h6" className="text-navy" style={{ fontWeight: '700' }}>
+              <Typography
+                numberOfLines={1}
+                className="text-navy text-right"
+                style={{ fontSize: 22, lineHeight: 29, fontWeight: '700' }}
+              >
                 {formatNumber(stats.productCount ?? 0)} / {formatNumber(stats.pendingOrders ?? 0)}
               </Typography>
-            </View>
-          </Pressable>
+            </Pressable>
+          </View>
         ) : null}
 
         {/* 上架商品是賣家最常做的事，所以獨立成一顆大按鈕。 */}
@@ -213,8 +255,11 @@ export default function SellerAccountScreen() {
             end={{ x: 1, y: 0 }}
             className="flex-row items-center justify-center gap-2 py-4"
           >
-            <Plus size={20} color={BRAND.white} strokeWidth={2.8} />
-            <Typography type="body" className="text-white" style={{ fontWeight: '700' }}>
+            <Plus size={22} color={BRAND.white} strokeWidth={2.8} />
+            <Typography
+              className="text-white"
+              style={{ fontSize: 17, lineHeight: 22, fontWeight: '700' }}
+            >
               新增商品
             </Typography>
           </LinearGradient>
@@ -235,7 +280,10 @@ export default function SellerAccountScreen() {
               我的{COIN_NAME}
               {coins?.wallet.checkedInToday === false ? ' · 今天還沒簽到' : ''}
             </Typography>
-            <Typography type="h6" className="text-navy" style={{ fontWeight: '700' }}>
+            <Typography
+              className="text-navy"
+              style={{ fontSize: 20, lineHeight: 26, fontWeight: '700' }}
+            >
               {formatNumber(coins?.wallet.balance ?? 0)}
             </Typography>
           </View>
@@ -246,50 +294,48 @@ export default function SellerAccountScreen() {
             accessibilityLabel="賺幣換曝光"
             onPress={() => router.push('/seller/promote')}
           >
-            <Typography type="body-sm" className="text-brand-orange" style={{ fontWeight: '600' }}>
+            <Typography type="body-sm" className="text-brand-orange" style={{ fontWeight: '700' }}>
               賺幣換曝光
             </Typography>
             <ChevronRight size={16} color={BRAND.orange} />
           </Pressable>
         </Pressable>
 
-        <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
-          <MenuRow
-            icon={<Package size={18} color={BRAND.blue} />}
-            title="商品管理"
-            onPress={() => router.push('/seller/products')}
-          />
-          <MenuRow
-            icon={<Receipt size={18} color={BRAND.blue} />}
-            title="訂單管理"
-            onPress={() => router.navigate('/seller/orders')}
-          />
-          <MenuRow
-            icon={<Ticket size={18} color={BRAND.blue} />}
-            title="優惠券與折扣碼"
-            onPress={() => router.push('/seller/coupons')}
-          />
-          <MenuRow
-            icon={<BarChart3 size={18} color={BRAND.blue} />}
-            title="銷售分析"
-            onPress={() => router.push('/seller/analytics')}
-          />
-          <MenuRow
-            icon={<Star size={18} color={BRAND.blue} />}
-            title="買家評價與回覆"
-            onPress={() => router.push('/seller/reviews')}
-          />
-          <MenuRow
-            icon={<Megaphone size={18} color={BRAND.blue} />}
-            title="推廣中心"
-            onPress={() => router.push('/seller/promote')}
-          />
-          <MenuRow
-            icon={<StoreIcon size={18} color={BRAND.blue} />}
-            title="店鋪與出貨設定"
-            onPress={() => router.push('/seller/store')}
-          />
-        </View>
+        <MenuRow
+          icon={<Package size={20} color={BRAND.blue} />}
+          title="商品管理"
+          onPress={() => router.push('/seller/products')}
+        />
+        <MenuRow
+          icon={<Receipt size={20} color={BRAND.blue} />}
+          title="訂單管理"
+          onPress={() => router.navigate('/seller/orders')}
+        />
+        <MenuRow
+          icon={<Ticket size={20} color={BRAND.blue} />}
+          title="優惠券與折扣碼"
+          onPress={() => router.push('/seller/coupons')}
+        />
+        <MenuRow
+          icon={<BarChart3 size={20} color={BRAND.blue} />}
+          title="銷售分析"
+          onPress={() => router.push('/seller/analytics')}
+        />
+        <MenuRow
+          icon={<Star size={20} color={BRAND.blue} />}
+          title="買家評價與回覆"
+          onPress={() => router.push('/seller/reviews')}
+        />
+        <MenuRow
+          icon={<Megaphone size={20} color={BRAND.blue} />}
+          title="推廣中心"
+          onPress={() => router.push('/seller/promote')}
+        />
+        <MenuRow
+          icon={<StoreIcon size={20} color={BRAND.blue} />}
+          title="店鋪與出貨設定"
+          onPress={() => router.push('/seller/store')}
+        />
 
         {/* 買家與賣家是兩套介面：切回買家端的入口放在這裡，各分頁不再放介面切換鍵。 */}
         <Pressable
@@ -319,46 +365,44 @@ export default function SellerAccountScreen() {
           <ChevronRight size={18} color={BRAND.muted} />
         </Pressable>
 
-        <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
-          <View className="flex-row items-center gap-3 px-4 py-3.5">
-            <Avatar size="sm" alt={profile?.display_name ?? '會員'}>
-              {profile?.avatar_url ? <Avatar.Image source={{ uri: profile.avatar_url }} /> : null}
-              <Avatar.Fallback />
-            </Avatar>
-            <View className="flex-1">
-              <Typography
-                type="body-sm"
-                numberOfLines={1}
-                className="text-navy"
-                style={{ fontWeight: '600' }}
-              >
-                {protectBrand(profile?.display_name ?? '極貨網會員')}
-              </Typography>
-              <Typography type="body-xs" color="muted" numberOfLines={1}>
-                {account?.email ?? ''}
-              </Typography>
-            </View>
+        <View className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-3.5">
+          <Avatar size="sm" alt={profile?.display_name ?? '會員'}>
+            {profile?.avatar_url ? <Avatar.Image source={{ uri: profile.avatar_url }} /> : null}
+            <Avatar.Fallback />
+          </Avatar>
+          <View className="flex-1">
+            <Typography
+              type="body-sm"
+              numberOfLines={1}
+              className="text-navy"
+              style={{ fontWeight: '600' }}
+            >
+              {protectBrand(profile?.display_name ?? '極貨網會員')}
+            </Typography>
+            <Typography type="body-xs" color="muted" numberOfLines={1}>
+              {account?.email ?? ''}
+            </Typography>
           </View>
-          <MenuRow
-            icon={<UserCog size={18} color={BRAND.blue} />}
-            title="編輯個人資料"
-            onPress={() => router.push('/profile/edit')}
-          />
-          <MenuRow
-            icon={<LifeBuoy size={18} color={BRAND.blue} />}
-            title="聯絡我們"
-            onPress={() => router.push('/support/contact')}
-          />
-          <MenuRow
-            icon={<LogOut size={18} color={BRAND.blue} />}
-            title="登出"
-            danger
-            onPress={() => {
-              exitSellerMode();
-              void signOut();
-            }}
-          />
         </View>
+        <MenuRow
+          icon={<UserCog size={20} color={BRAND.blue} />}
+          title="編輯個人資料"
+          onPress={() => router.push('/profile/edit')}
+        />
+        <MenuRow
+          icon={<LifeBuoy size={20} color={BRAND.blue} />}
+          title="聯絡我們"
+          onPress={() => router.push('/support/contact')}
+        />
+        <MenuRow
+          icon={<LogOut size={20} color={BRAND.blue} />}
+          title="登出"
+          danger
+          onPress={() => {
+            exitSellerMode();
+            void signOut();
+          }}
+        />
       </ScrollView>
     </View>
   );
