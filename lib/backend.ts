@@ -17,12 +17,24 @@ import type {
   RecommendResponses,
 } from '@/lib/api/contracts';
 
-const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+/*
+ * The backend URL/key can arrive under either name depending on how the project
+ * was provisioned, so both are accepted. A missing value must NOT throw at
+ * module load: this file is imported by every `lib/api/*` module, so a throw
+ * here takes down the whole React tree instead of failing the one screen that
+ * needed data.
+ */
+const url =
+  process.env.EXPO_PUBLIC_BILT_URL ?? process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'http://localhost';
+const anonKey =
+  process.env.EXPO_PUBLIC_BILT_ANON_KEY ??
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  'missing-anon-key';
 
-if (!url || !anonKey) {
-  throw new Error('Missing EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
-}
+/** True when real credentials were found; screens can surface a clear notice. */
+export const isBackendConfigured =
+  !!(process.env.EXPO_PUBLIC_BILT_URL ?? process.env.EXPO_PUBLIC_SUPABASE_URL) &&
+  !!(process.env.EXPO_PUBLIC_BILT_ANON_KEY ?? process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 
 export const bilt = createClient(url, anonKey, {
   auth: {
