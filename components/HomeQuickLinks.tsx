@@ -1,0 +1,58 @@
+import { Pressable, ScrollView, View } from 'react-native';
+import { Typography } from 'heroui-native';
+import { router, type Href } from 'expo-router';
+import { Bell, Heart, Receipt, ShieldCheck, ShoppingCart } from 'lucide-react-native';
+
+import { BRAND } from '@/lib/brand';
+import { useIsAdminConsole } from '@/lib/session';
+
+type Item = {
+  label: string;
+  href: Href;
+  icon: React.ReactNode;
+};
+
+/** Always-visible quick-jump shortcuts under the home search field. */
+export function HomeQuickLinks() {
+  const showAdmin = useIsAdminConsole();
+
+  const items: Item[] = [
+    { label: '我的訂單', href: '/orders', icon: <Receipt size={15} color={BRAND.blue} /> },
+    { label: '我的收藏', href: '/favorites', icon: <Heart size={15} color={BRAND.orange} /> },
+    { label: '購物車', href: '/cart', icon: <ShoppingCart size={15} color={BRAND.blue} /> },
+    { label: '通知中心', href: '/notifications', icon: <Bell size={15} color={BRAND.blue} /> },
+  ];
+
+  if (showAdmin) {
+    items.push({
+      label: '平台管理',
+      href: '/admin',
+      icon: <ShieldCheck size={15} color={BRAND.navy} />,
+    });
+  }
+
+  return (
+    <View className="pb-3">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerClassName="gap-2 px-4"
+      >
+        {items.map((item) => (
+          <Pressable
+            key={item.label}
+            className="bg-surface-secondary flex-row items-center gap-1.5 rounded-full px-3 py-2"
+            onPress={() => router.push(item.href)}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+          >
+            {item.icon}
+            <Typography type="body-xs" className="text-navy" style={{ fontWeight: '600' }}>
+              {item.label}
+            </Typography>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}

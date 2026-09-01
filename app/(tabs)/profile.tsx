@@ -1,0 +1,262 @@
+import type { ReactNode } from 'react';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { Avatar, Button, Chip, Typography } from 'heroui-native';
+import { useBrandToast } from '@/components/brand/BrandToast';
+import Constants from 'expo-constants';
+import { router } from 'expo-router';
+import {
+  Bell,
+  ChevronRight,
+  FileLock2,
+  Heart,
+  History,
+  LifeBuoy,
+  LogOut,
+  Receipt,
+  RefreshCw,
+  Repeat,
+  ScrollText,
+  ShieldCheck,
+  Store as StoreIcon,
+  UserX,
+} from 'lucide-react-native';
+
+import { SignInRequired } from '@/components/SignInRequired';
+import { useMyStoreQuery } from '@/lib/api/seller';
+import { protectBrand } from '@/components/brand/BrandText';
+import { NoTranslate } from '@/components/brand/NoTranslate';
+import { BRAND, BRAND_COPY } from '@/lib/brand';
+import { formatDate } from '@/lib/format';
+import { enterSellerMode } from '@/lib/mode';
+import { useIsAdminConsole, useSessionStore, useUserId } from '@/lib/session';
+import { useOtaUpdates } from '@/lib/updates';
+
+function MenuRow({
+  icon,
+  title,
+  onPress,
+  danger = false,
+}: {
+  icon: ReactNode;
+  title: string;
+  onPress: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <Pressable className="flex-row items-center gap-3 px-4 py-3.5" onPress={onPress}>
+      <View className="bg-brand-blue-soft h-9 w-9 items-center justify-center rounded-xl">
+        {icon}
+      </View>
+      <Typography type="body" className={danger ? 'text-danger flex-1' : 'text-navy flex-1'}>
+        {title}
+      </Typography>
+      <ChevronRight size={18} color={BRAND.muted} />
+    </Pressable>
+  );
+}
+
+export default function ProfileScreen() {
+  const userId = useUserId();
+  const account = useSessionStore((s) => s.account);
+  const profile = useSessionStore((s) => s.profile);
+  const signOut = useSessionStore((s) => s.signOut);
+  const showAdmin = useIsAdminConsole();
+  const { data: store } = useMyStoreQuery(userId);
+  const { toast } = useBrandToast();
+  const ota = useOtaUpdates();
+
+  const checkForUpdate = () => {
+    if (ota.status === 'unsupported') {
+      toast.show({ variant: 'default', label: '這個版本不支援線上更新（開發版／網頁版）' });
+      return;
+    }
+    if (ota.isReady) {
+      ota.restart();
+      return;
+    }
+    toast.show({ variant: 'default', label: '正在檢查更新…' });
+    ota.check();
+  };
+
+  if (!userId) {
+    return (
+      <View className="bg-background pt-safe flex-1">
+        <SignInRequired title="登入極貨網" description={BRAND_COPY.subTagline} />
+      </View>
+    );
+  }
+
+  const roles = account?.roles ?? ['buyer'];
+
+  return (
+    <View className="bg-background flex-1">
+      <ScrollView contentContainerClassName="pb-10">
+        <View className="bg-surface pt-safe px-4 pb-5">
+          <View className="flex-row items-center gap-3 pt-4">
+            <Avatar size="lg" alt={profile?.display_name ?? '會員'}>
+              {profile?.avatar_url ? <Avatar.Image source={{ uri: profile.avatar_url }} /> : null}
+              <Avatar.Fallback />
+            </Avatar>
+            <View className="flex-1">
+              <Typography type="h5" className="text-navy" style={{ fontWeight: '700' }}>
+                {protectBrand(profile?.display_name ?? '極貨網會員')}
+              </Typography>
+              <Typography type="body-sm" color="muted">
+                {account?.email ?? ''}
+              </Typography>
+              <Typography type="body-xs" color="muted">
+                加入時間 {formatDate(account?.created_at)}
+              </Typography>
+            </View>
+          </View>
+
+          <View className="mt-3 flex-row flex-wrap gap-2">
+            {roles.includes('buyer') ? (
+              <Chip size="sm" variant="soft" color="accent">
+                買家
+              </Chip>
+            ) : null}
+            {roles.includes('seller') ? (
+              <Chip size="sm" variant="soft" color="warning">
+                賣家
+              </Chip>
+            ) : null}
+            {roles.includes('admin') ? (
+              <Chip size="sm" variant="soft" color="success">
+                管理員
+              </Chip>
+            ) : null}
+          </View>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-4 self-start"
+            onPress={() => router.push('/profile/edit')}
+          >
+            <Button.Label>編輯個人資料</Button.Label>
+          </Button>
+        </View>
+
+        <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
+          <MenuRow
+            icon={<Receipt size={18} color={BRAND.blue} />}
+            title="我的訂單"
+            onPress={() => router.push('/orders')}
+          />
+          <MenuRow
+            icon={<Heart size={18} color={BRAND.blue} />}
+            title="我的收藏"
+            onPress={() => router.push('/favorites')}
+          />
+          <MenuRow
+            icon={<History size={18} color={BRAND.blue} />}
+            title="最近瀏覽"
+            onPress={() => router.push('/recently-viewed')}
+          />
+          <MenuRow
+            icon={<Bell size={18} color={BRAND.blue} />}
+            title="通知中心"
+            onPress={() => router.push('/notifications')}
+          />
+        </View>
+
+        {/* 買家與賣家是兩套介面：這裡只有切換入口，賣家功能全部在賣家介面裡。 */}
+        {store ? (
+          <Pressable
+            className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-4"
+            onPress={() => enterSellerMode(true)}
+          >
+            <View
+              className="h-10 w-10 items-center justify-center rounded-xl"
+              style={{ backgroundColor: BRAND.orangeSoft }}
+            >
+              <Repeat size={19} color={BRAND.orange} />
+            </View>
+            <View className="flex-1">
+              <Typography type="body" className="text-navy" style={{ fontWeight: '700' }}>
+                切換到賣家介面
+              </Typography>
+              <Typography type="body-xs" color="muted" numberOfLines={1}>
+                {store.name} · 訂單、商品與推廣都在那一邊
+              </Typography>
+            </View>
+            <ChevronRight size={18} color={BRAND.muted} />
+          </Pressable>
+        ) : (
+          <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
+            <MenuRow
+              icon={<StoreIcon size={18} color={BRAND.blue} />}
+              title="申請成為賣家"
+              onPress={() => router.push('/seller/onboarding')}
+            />
+          </View>
+        )}
+
+        {showAdmin ? (
+          <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
+            <MenuRow
+              icon={<ShieldCheck size={18} color={BRAND.blue} />}
+              title="平台管理"
+              onPress={() => router.push('/admin')}
+            />
+          </View>
+        ) : null}
+
+        <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
+          <MenuRow
+            icon={<LifeBuoy size={18} color={BRAND.blue} />}
+            title="聯絡我們"
+            onPress={() => router.push('/support/contact')}
+          />
+          <MenuRow
+            icon={<ScrollText size={18} color={BRAND.blue} />}
+            title="服務條款"
+            onPress={() => router.push('/legal/terms')}
+          />
+          <MenuRow
+            icon={<FileLock2 size={18} color={BRAND.blue} />}
+            title="隱私權政策"
+            onPress={() => router.push('/legal/privacy')}
+          />
+          {Platform.OS === 'web' ? null : (
+            <MenuRow
+              icon={<RefreshCw size={18} color={BRAND.blue} />}
+              title={
+                ota.isReady
+                  ? '有新版本，點此重新啟動'
+                  : ota.status === 'checking' || ota.status === 'downloading'
+                    ? '正在檢查更新…'
+                    : '檢查 App 更新'
+              }
+              onPress={checkForUpdate}
+            />
+          )}
+        </View>
+
+        <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
+          <MenuRow
+            icon={<LogOut size={18} color={BRAND.blue} />}
+            title="登出"
+            danger
+            onPress={() => void signOut()}
+          />
+          <MenuRow
+            icon={<UserX size={18} color={BRAND.blue} />}
+            title="刪除帳號"
+            danger
+            onPress={() => router.push('/profile/delete')}
+          />
+        </View>
+
+        <View className="mt-6 items-center gap-1">
+          <Typography type="body-xs" color="muted">
+            <NoTranslate>
+              © 2026 創極數位資訊企業社 -極貨網 JIHUOWANG 版本 1.0.0
+            </NoTranslate>
+          </Typography>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}

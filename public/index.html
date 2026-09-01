@@ -1,0 +1,74 @@
+<!doctype html>
+<!--
+  Web HTML template (used by `expo export -p web` and the dev server because
+  web.output is 'single' — app/+html.tsx only applies to 'static' output).
+  The lang attribute and title below are substituted from app.config.ts at
+  build time; only their FIRST occurrence in this file is replaced, so don't
+  repeat those placeholder tokens anywhere above them.
+
+  Carries the PWA install contract: the manifest link for Android/Chrome and the
+  apple-* tags iOS Safari needs (iOS ignores most of the manifest). Keep the app
+  identity in public/manifest.json in sync with the name in app.config.ts.
+-->
+<html lang="%LANG_ISO_CODE%" translate="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- The UI is written in Taiwan Traditional Chinese and must stay that way:
+         machine translation rewrites brand names and product copy (極貨網 →
+         計貨網). lang comes from app.config.ts web.lang (zh-Hant-TW); these two
+         opt the whole document out of Chrome / Google Translate. -->
+    <meta name="google" content="notranslate" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+    />
+    <title>%WEB_TITLE%</title>
+
+    <!-- Web app manifest — the install contract for Android/Chrome -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#09090b" />
+
+    <!-- iOS home-screen support. No apple-mobile-web-app-title: iOS falls back to
+         <title>, which is substituted from app.config.ts and stays in sync. -->
+    <link rel="apple-touch-icon" sizes="1024x1024" href="/icons/icon-1024.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* touch-action removes the mobile browser's wait-for-double-tap delay, so
+         bottom-tab taps register immediately instead of feeling sticky. The tap
+         highlight is replaced by the app's own press feedback. */
+      html {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>請開啟瀏覽器的 JavaScript 才能使用極貨網。</noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

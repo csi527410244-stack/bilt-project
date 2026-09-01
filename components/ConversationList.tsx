@@ -1,0 +1,145 @@
+import { useRef } from 'react';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Spinner, Typography } from 'heroui-native';
+import { router } from 'expo-router';
+import { MessagesSquare } from 'lucide-react-native';
+
+import { AppImage } from '@/components/AppImage';
+import { EmptyState } from '@/components/EmptyState';
+import { protectBrand } from '@/components/brand/BrandText';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import type { ConversationRow } from '@/lib/api/social';
+import { BRAND } from '@/lib/brand';
+import { scrollToIndexFallback, useFocusHighlight, type FocusKey } from '@/lib/focus';
+import { relativeTime } from '@/lib/format';
+
+type Props = {
+  conversations: ConversationRow[];
+  isLoading: boolean;
+  /** 目前登入的人：決定每一列要顯示店名（買家視角）還是買家名稱（賣家視角）。 */
+  userId: string;
+  emptyTitle: string;
+  emptyDescription: string;
+  /** 通知落地時要指出某一條對話的分頁（買家或賣家的訊息分頁各一把）。 */
+  focusKey?: FocusKey;
+};
+
+/** 對話列表本體。買家分頁與賣家介面各自篩選資料，共用同一份列樣式。 */
+export function ConversationList({
+  conversations,
+  isLoading,
+  userId,
+  emptyTitle,
+  emptyDescription,
+  focusKey,
+}: Props) {
+  const { refreshing, onRefresh } = usePullToRefresh();
+  const listRef = useRef<FlatList<ConversationRow>>(null);
+
+  const focused = useFocusHighlight<ConversationRow>({
+    // focusKey 沒給的話用買家那把也不會被觸發（沒有人會登記它）。
+    key: focusKey ?? 'buyer-messages',
+    listRef,
+    items: focusKey ? conversations : [],
+    matches: (item, token) => item.id === token,
+  });
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <Spinner />
+      </View>
+    );
+  }
+
+  return (
+    <FlatList
+      ref={listRef}
+      className="flex-1"
+      data={conversations}
+      keyExtractor={(item) => item.id}
+      contentContainerClassName="p-4 gap-2.5 pb-10"
+      onScrollToIndexFailed={(info) => scrollToIndexFallback(listRef, info)}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={BRAND.blue}
+          colors={[BRAND.blue]}
+        />
+      }
+      ListEmptyComponent={
+        <EmptyState
+          icon={<MessagesSquare size={26} color={BRAND.blue} />}
+          title={emptyTitle}
+          description={emptyDescription}
+        />
+      }
+      renderItem={({ item }) => {
+        const isBuyerSide = item.buyer_id === userId;
+        const title = isBuyerSide
+          ? (item.store?.name ?? '極貨網賣家')
+          : (item.buyer?.display_name ?? '買家');
+        // 檢查是否有未讀消息 (簡化實現 - 在實際應用中應從 messages query 計算)
+        const hasUnread = item.last_message_at ? true : false; // TODO: 實現真實的未讀檢查
+        return (
+          <Pressable
+            className={
+              focused === item.id
+                ? 'bg-surface border-brand-orange flex-row items-center gap-3 rounded-2xl border-2 p-3'
+                : 'bg-surface flex-row items-center gap-3 rounded-2xl p-3'
+            }
+            onPress={() => router.push({ pathname: '/messages/[id]', params: { id: item.id } })}
+          >
+            <View className="relative">
+              <AppImage
+                uri={
+                  isBuyerSide
+                    ? (item.product?.cover_url ?? item.store?.logo_url ?? null)
+                    : (item.buyer?.avatar_url ?? item.product?.cover_url ?? null)
+                }
+                className="h-12 w-12 rounded-xl"
+              />
+              {/* 未讀消息提示 - 藍色圓點 */}
+              {hasUnread ? (
+                <View
+                  className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-brand-blue"
+                  style={{
+                    shadowColor: BRAND.blue,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.5,
+                    shadowRadius: 2,
+                    elevation: 2,
+                  }}
+                />
+              ) : null}
+            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center justify-between gap-2">
+                <Typography
+                  type="body-sm"
+                  numberOfLines={1}
+                  className="text-navy flex-1"
+                  style={{ fontWeight: '600' }}
+                >
+                  {protectBrand(title)}
+                </Typography>
+                <Typography type="body-xs" color="muted" numberOfLines={1}>
+                  {relativeTime(item.last_message_at)}
+                </Typography>
+              </View>
+              {item.product ? (
+                <Typography type="body-xs" color="muted" numberOfLines={1}>
+                  關於：{item.product.title}
+                </Typography>
+              ) : null}
+              <Typography type="body-sm" color="muted" numberOfLines={1}>
+                {item.last_message ?? '開始聊聊吧'}
+              </Typography>
+            </View>
+          </Pressable>
+        );
+      }}
+    />
+  );
+}
