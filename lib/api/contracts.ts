@@ -486,3 +486,17 @@ export type PriceWatchResult = {
 export type PriceWatchResponses = {
   run: PriceWatchResult;
 };
+
+/**
+ * `anti-spam` edge function：上架與訊息的防濫發檢查。
+ * 冷卻期、重複標題、每日額度與 AI 詐騙判定都在伺服器端決定，
+ * 因為 App 端的計數隨時可以被重裝或改時間繞過。
+ */
+export type AntiSpamResponses = {
+  cooldown: { allowed: boolean; next_allowed_at: string | null };
+  duplicate_check: { is_duplicate: boolean };
+  daily_limit: { allowed: boolean; remaining_today: number; watch_ad_to_unlock: boolean };
+  ai_check: { is_risky: boolean };
+  confirm_listing: { ok: true; remaining_today: number };
+  unlock_with_ad: { ok: true; remaining_today: number };
+};

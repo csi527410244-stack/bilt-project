@@ -81,7 +81,7 @@ export function ConversationList({
           ? (item.store?.name ?? '極貨網賣家')
           : (item.buyer?.display_name ?? '買家');
         // 檢查是否有未讀消息 (簡化實現 - 在實際應用中應從 messages query 計算)
-        const hasUnread = item.last_message_at ? true : false; // TODO: 實現真實的未讀檢查
+        const hasUnread = Boolean(item.last_message_at); // TODO: 實現真實的未讀檢查
         return (
           <Pressable
             className={
@@ -103,7 +103,7 @@ export function ConversationList({
               {/* 未讀消息提示 - 藍色圓點 */}
               {hasUnread ? (
                 <View
-                  className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-brand-blue"
+                  className="bg-brand-blue absolute -top-1 -right-1 h-3 w-3 rounded-full"
                   style={{
                     shadowColor: BRAND.blue,
                     shadowOffset: { width: 0, height: 1 },

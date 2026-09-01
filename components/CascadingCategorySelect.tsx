@@ -1,6 +1,6 @@
 /**
  * 級聯類別選擇器
- * 
+ *
  * 實現兩層級聯：
  * 1. 選擇主類別（例如 "3C科技"）
  * 2. 自動加載並顯示子類別（例如 "手機"、"電腦"、"耳機"）
@@ -8,8 +8,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { Button, Select, Typography } from 'heroui-native';
-import { useCategories } from '@/lib/api/catalog';
+import { Select, Typography } from 'heroui-native';
 import { BRAND } from '@/lib/brand';
 
 export type CascadingCategory = {
@@ -22,7 +21,10 @@ export type CascadingCategory = {
 /**
  * 類別階層結構（模擬後端數據）
  */
-const CATEGORY_HIERARCHY: Record<string, { name: string; subcategories: Array<{ id: string; name: string }> }> = {
+const CATEGORY_HIERARCHY: Record<
+  string,
+  { name: string; subcategories: Array<{ id: string; name: string }> }
+> = {
   '3c': {
     name: '3C科技',
     subcategories: [
@@ -33,7 +35,7 @@ const CATEGORY_HIERARCHY: Record<string, { name: string; subcategories: Array<{ 
       { id: '3c-gaming', name: '遊戲設備' },
     ],
   },
-  'fashion': {
+  fashion: {
     name: '服飾配飾',
     subcategories: [
       { id: 'fashion-mens', name: '男裝' },
@@ -43,7 +45,7 @@ const CATEGORY_HIERARCHY: Record<string, { name: string; subcategories: Array<{ 
       { id: 'fashion-accessories', name: '配飾' },
     ],
   },
-  'home': {
+  home: {
     name: '居家生活',
     subcategories: [
       { id: 'home-furniture', name: '家具' },
@@ -63,7 +65,6 @@ type Props = {
  * 級聯類別選擇器組件
  */
 export function CascadingCategorySelect({ value, onChange }: Props) {
-  const { data: categories } = useCategories();
   const [primaryId, setPrimaryId] = useState(value?.primaryCategoryId ?? '');
   const [subId, setSubId] = useState(value?.subCategoryId ?? '');
 
@@ -72,6 +73,9 @@ export function CascadingCategorySelect({ value, onChange }: Props) {
     if (!primaryId) return [];
     return CATEGORY_HIERARCHY[primaryId]?.subcategories ?? [];
   }, [primaryId]);
+
+  const primaryName = primaryId ? (CATEGORY_HIERARCHY[primaryId]?.name ?? '') : '';
+  const subName = subcategories.find((sub) => sub.id === subId)?.name ?? '';
 
   // 當主類別改變時，重置子類別並觸發回調
   useEffect(() => {
@@ -109,75 +113,68 @@ export function CascadingCategorySelect({ value, onChange }: Props) {
     <View className="gap-4">
       {/* 主類別選擇 */}
       <View>
-        <Typography
-          type="body-sm"
-          className="text-navy mb-2"
-          style={{ fontWeight: '600' }}
-        >
+        <Typography type="body-sm" className="text-navy mb-2" style={{ fontWeight: '600' }}>
           主類別
         </Typography>
         <Select
-          selectedKeys={primaryId ? [primaryId] : []}
-          onSelectionChange={(keys) => {
-            const first = Array.from(keys)[0];
-            setPrimaryId(String(first ?? ''));
+          value={primaryId ? { value: primaryId, label: primaryName } : undefined}
+          onValueChange={(option) => {
+            const selected = Array.isArray(option) ? option[0] : option;
+            setPrimaryId(selected?.value ?? '');
           }}
-          placeholder="選擇主類別"
-          className="w-full"
         >
-          {Object.entries(CATEGORY_HIERARCHY).map(([key, value]) => (
-            <Select.Item key={key} value={key} textValue={value.name}>
-              {value.name}
-            </Select.Item>
-          ))}
+          <Select.Trigger className="w-full">
+            <Select.Value placeholder="選擇主類別" />
+            <Select.TriggerIndicator />
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Overlay />
+            <Select.Content presentation="popover">
+              {Object.entries(CATEGORY_HIERARCHY).map(([key, entry]) => (
+                <Select.Item key={key} value={key} label={entry.name} />
+              ))}
+            </Select.Content>
+          </Select.Portal>
         </Select>
       </View>
 
       {/* 子類別選擇（僅在選中主類別時顯示） */}
       {primaryId && subcategories.length > 0 ? (
         <View>
-          <Typography
-            type="body-sm"
-            className="text-navy mb-2"
-            style={{ fontWeight: '600' }}
-          >
+          <Typography type="body-sm" className="text-navy mb-2" style={{ fontWeight: '600' }}>
             子類別
           </Typography>
           <Select
-            selectedKeys={subId ? [subId] : []}
-            onSelectionChange={(keys) => {
-              const first = Array.from(keys)[0];
-              setSubId(String(first ?? ''));
+            value={subId ? { value: subId, label: subName } : undefined}
+            onValueChange={(option) => {
+              const selected = Array.isArray(option) ? option[0] : option;
+              setSubId(selected?.value ?? '');
             }}
-            placeholder="選擇子類別"
-            className="w-full"
           >
-            {subcategories.map((sub) => (
-              <Select.Item key={sub.id} value={sub.id} textValue={sub.name}>
-                {sub.name}
-              </Select.Item>
-            ))}
+            <Select.Trigger className="w-full">
+              <Select.Value placeholder="選擇子類別" />
+              <Select.TriggerIndicator />
+            </Select.Trigger>
+            <Select.Portal>
+              <Select.Overlay />
+              <Select.Content presentation="popover">
+                {subcategories.map((sub) => (
+                  <Select.Item key={sub.id} value={sub.id} label={sub.name} />
+                ))}
+              </Select.Content>
+            </Select.Portal>
           </Select>
         </View>
       ) : null}
 
       {/* 選擇摘要 */}
       {primaryId ? (
-        <View
-          className="rounded-lg p-3"
-          style={{ backgroundColor: BRAND.blueSoft }}
-        >
+        <View className="rounded-lg p-3" style={{ backgroundColor: BRAND.blueSoft }}>
           <Typography type="body-xs" className="text-brand-blue">
             已選擇:{' '}
-            <Typography
-              type="body-xs"
-              className="text-brand-blue"
-              style={{ fontWeight: '700' }}
-            >
-              {CATEGORY_HIERARCHY[primaryId]?.name}
-              {subId && subcategories.find((s) => s.id === subId)
-                ? ` > ${subcategories.find((s) => s.id === subId)?.name}`
-                : ''}
+            <Typography type="body-xs" className="text-brand-blue" style={{ fontWeight: '700' }}>
+              {primaryName}
+              {subName ? ` > ${subName}` : ''}
             </Typography>
           </Typography>
         </View>

@@ -22,7 +22,7 @@ import { AppImage } from '@/components/AppImage';
 import { EmptyState } from '@/components/EmptyState';
 import { SignInRequired } from '@/components/SignInRequired';
 import { useCoinSummary } from '@/lib/api/coins';
-import { useMyStoreQuery, useSellerDashboard, useSellerShippingProfile } from '@/lib/api/seller';
+import { useMyStoreQuery, useSellerDashboard } from '@/lib/api/seller';
 import { protectBrand } from '@/components/brand/BrandText';
 import { BRAND } from '@/lib/brand';
 import { formatNumber, formatPrice } from '@/lib/format';
@@ -54,20 +54,20 @@ function MenuRow({
   );
 }
 
+async function clearNotifications() {
+  await Notifications.dismissAllNotificationsAsync();
+}
+
 /**
  * 「我的」頁首。店鋪資料還在載入時也照樣畫出來（含切回買家介面的出口與清除推送訊息），
  * 頁首整塊消失只剩轉圈圈會讓人以為畫面壞了。
  */
 function AccountHeader({ children }: { children: ReactNode }) {
-  const clearNotifications = async () => {
-    await Notifications.dismissAllNotificationsAsync();
-  };
-
   return (
     <View className="bg-surface pt-safe px-4 pb-5">
       <View className="flex-row items-center gap-3 pt-3">{children}</View>
 
-      <View className="flex-row gap-2 mt-4">
+      <View className="mt-4 flex-row gap-2">
         <Button variant="secondary" size="sm" className="flex-1" onPress={exitSellerMode}>
           <View className="flex-row items-center gap-1.5">
             <Repeat size={14} color={BRAND.navy} />
@@ -76,12 +76,7 @@ function AccountHeader({ children }: { children: ReactNode }) {
             </Typography>
           </View>
         </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="flex-1"
-          onPress={clearNotifications}
-        >
+        <Button variant="secondary" size="sm" className="flex-1" onPress={clearNotifications}>
           <View className="flex-row items-center gap-1.5">
             <Trash2 size={14} color={BRAND.navy} />
             <Typography type="body-sm" className="text-navy" style={{ fontWeight: '600' }}>
@@ -233,8 +228,7 @@ export default function SellerAccountScreen() {
                 商品 / 待處理訂單
               </Typography>
               <Typography type="body" className="text-navy" style={{ fontWeight: '700' }}>
-                {formatNumber(stats.productCount ?? 0)} /{' '}
-                {formatNumber(stats.pendingOrders ?? 0)}
+                {formatNumber(stats.productCount ?? 0)} / {formatNumber(stats.pendingOrders ?? 0)}
               </Typography>
             </View>
             <ChevronRight size={18} color={BRAND.muted} />

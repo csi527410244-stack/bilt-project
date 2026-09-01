@@ -1,9 +1,9 @@
 /**
  * OpenAI gpt-4o-mini 集成
- * 
+ *
  * 超輕量的 GPT-4 版本，專為成本效益的二進制分類而優化。
  * 用於檢測詐騙、非法交易、平台濫用等。
- * 
+ *
  * 系統提示強制執行嚴格的輸出約束：
  * 只返回單個布爾字符 '1' (危險) 或 '0' (安全)
  */
@@ -12,6 +12,32 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = 'gpt-4o-mini';
 
 export type SecurityCheckType = 'message' | 'listing' | 'general';
+
+interface OpenAIChatCompletionResponse {
+  choices: Array<{ message: { content: string } }>;
+}
+
+function isOpenAIChatCompletionResponse(value: unknown): value is OpenAIChatCompletionResponse {
+  if (typeof value !== 'object' || value === null || !('choices' in value)) {
+    return false;
+  }
+  const { choices } = value as Record<string, unknown>;
+  if (!Array.isArray(choices)) {
+    return false;
+  }
+  const choiceList: unknown[] = choices;
+  return choiceList.every((choice) => {
+    if (typeof choice !== 'object' || choice === null || !('message' in choice)) {
+      return false;
+    }
+    const { message } = choice as Record<string, unknown>;
+    if (typeof message !== 'object' || message === null || !('content' in message)) {
+      return false;
+    }
+    const { content } = message as Record<string, unknown>;
+    return typeof content === 'string';
+  });
+}
 
 /**
  * OpenAI 安全檢查結果
@@ -25,7 +51,7 @@ export interface SecurityCheckResult {
 
 /**
  * 使用 OpenAI gpt-4o-mini 檢查輸入內容
- * 
+ *
  * 詐騙檢測提示：
  * - 私下匯款要求
  * - 線下交易強制
@@ -35,7 +61,7 @@ export interface SecurityCheckResult {
  */
 export async function checkContentWithOpenAI(
   content: string,
-  checkType: SecurityCheckType = 'general'
+  checkType: SecurityCheckType = 'general',
 ): Promise<SecurityCheckResult> {
   if (!OPENAI_API_KEY) {
     console.error('OPENAI_API_KEY is not set');
@@ -94,9 +120,11 @@ Specifically look for:
       throw new Error(`OpenAI API returned ${response.status}: ${error}`);
     }
 
-    const data = (await response.json()) as {
-      choices: Array<{ message: { content: string } }>;
-    };
+    const rawData: unknown = await response.json();
+    if (!isOpenAIChatCompletionResponse(rawData)) {
+      throw new Error('OpenAI API returned an unexpected response shape');
+    }
+    const data = rawData;
     const output = data.choices[0]?.message.content?.trim() || '0';
     const isRisky = output === '1';
 
@@ -123,11 +151,9 @@ Specifically look for:
  */
 export async function checkMultipleContents(
   contents: string[],
-  checkType: SecurityCheckType = 'general'
+  checkType: SecurityCheckType = 'general',
 ): Promise<SecurityCheckResult[]> {
-  return Promise.all(
-    contents.map((content) => checkContentWithOpenAI(content, checkType))
-  );
+  return Promise.all(contents.map((content) => checkContentWithOpenAI(content, checkType)));
 }
 
 /**
@@ -158,7 +184,7 @@ async function processQueue() {
   // 防止 API 限制，插入延遲
   await new Promise((r) => setTimeout(r, 100));
   isProcessing = false;
-  processQueue();
+  void processQueue();
 }
 
 /**
@@ -166,10 +192,10 @@ async function processQueue() {
  */
 export function queuedSecurityCheck(
   content: string,
-  checkType: SecurityCheckType = 'general'
+  checkType: SecurityCheckType = 'general',
 ): Promise<SecurityCheckResult> {
   return new Promise((resolve, reject) => {
     checkQueue.push({ content, type: checkType, resolve, reject });
-    processQueue();
+    void processQueue();
   });
 }

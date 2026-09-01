@@ -1,14 +1,17 @@
 /**
- * 反垃圾郵件和安全層系統
- * 
+ * 反垃圾與安全層系統
+ *
  * 層 1: 冷卻期 (1 分鐘)
  * 層 2: 重複內容檢查
  * 層 3: 日限額 + 獎勵廣告
  * 層 4: OpenAI gpt-4o-mini 詐騙防護
+ *
+ * 四層判定全部在 `anti-spam` edge function 裡跑：時間、計數與 OpenAI 金鑰
+ * 都不能放在 App 端，否則重裝 App 或改系統時間就能繞過。
  */
 
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { BACKEND } from '@/lib/backend';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { callAntiSpam } from '@/lib/backend';
 
 export type AntiSpamCheckResult = {
   allowed: boolean;
@@ -34,16 +37,15 @@ export type MessageSecurityCheck = {
  * 層 1: 檢查 1 分鐘冷卻期
  */
 export async function checkCooldown(userId: string): Promise<AntiSpamCheckResult> {
-  const response = await BACKEND.http.get(`/anti-spam/cooldown/${userId}`);
-  const data = response.json() as { allowed: boolean; nextAllowedAt?: string };
+  const data = await callAntiSpam('cooldown', { userId });
 
   return {
     allowed: data.allowed,
-    reason: !data.allowed
-      ? '系統提醒：請歇會兒！為了維護平台品質，兩次上架需間隔 1 分鐘。'
-      : undefined,
+    reason: data.allowed
+      ? undefined
+      : '系統提醒：請歇會兒！為了維護平台品質，兩次上架需間隔 1 分鐘。',
     layer: 1,
-    nextAllowedAt: data.nextAllowedAt ? new Date(data.nextAllowedAt) : undefined,
+    nextAllowedAt: data.next_allowed_at ? new Date(data.next_allowed_at) : undefined,
   };
 }
 
@@ -52,19 +54,13 @@ export async function checkCooldown(userId: string): Promise<AntiSpamCheckResult
  */
 export async function checkDuplicateTitle(
   userId: string,
-  title: string
+  title: string,
 ): Promise<AntiSpamCheckResult> {
-  const response = await BACKEND.http.post(`/anti-spam/duplicate-check`, {
-    userId,
-    title,
-  });
-  const data = response.json() as { isDuplicate: boolean };
+  const data = await callAntiSpam('duplicate_check', { userId, title });
 
   return {
-    allowed: !data.isDuplicate,
-    reason: data.isDuplicate
-      ? '系統提醒：請勿重複發布相同的商品內容！'
-      : undefined,
+    allowed: !data.is_duplicate,
+    reason: data.is_duplicate ? '系統提醒：請勿重複發布相同的商品內容！' : undefined,
     layer: 2,
   };
 }
@@ -73,55 +69,41 @@ export async function checkDuplicateTitle(
  * 層 3: 檢查日限額（10 個免費，11+ 需要看廣告）
  */
 export async function checkDailyLimit(userId: string): Promise<AntiSpamCheckResult> {
-  const response = await BACKEND.http.get(`/anti-spam/daily-limit/${userId}`);
-  const data = response.json() as {
-    allowed: boolean;
-    remainingToday: number;
-    watchAdToUnlock?: boolean;
-  };
+  const data = await callAntiSpam('daily_limit', { userId });
 
   return {
     allowed: data.allowed,
-    reason: !data.allowed
-      ? '💡 今日免費上架額度已達 10 件！觀看 1 個 15 秒贊助影片即可免費解鎖今日無限上架額度！'
-      : undefined,
+    reason: data.allowed
+      ? undefined
+      : '今日免費上架額度已達 10 件！觀看 1 個 15 秒贊助影片即可免費解鎖今日無限上架額度。',
     layer: 3,
-    remainingToday: data.remainingToday,
-    watchAdToUnlock: data.watchAdToUnlock ?? false,
+    remainingToday: data.remaining_today,
+    watchAdToUnlock: data.watch_ad_to_unlock,
   };
 }
 
 /**
  * 層 4: 使用 OpenAI gpt-4o-mini 檢查詐騙或非法內容
- * 
- * 成本優化: gpt-4o-mini 是 GPT-4 的超輕量版本，用於簡單的二進制分類。
- * 只返回 '1'（危險）或 '0'（安全）。
+ *
+ * 成本優化: gpt-4o-mini 用於簡單的二元分類，只回傳危險或安全。
+ * 服務失敗時預設放行，不中斷使用者流程，改由人工審核補上。
  */
 export async function checkWithAI(
   content: string,
-  type: 'message' | 'listing'
+  type: 'message' | 'listing',
 ): Promise<AntiSpamCheckResult> {
   try {
-    const response = await BACKEND.http.post(`/anti-spam/ai-check`, {
-      content,
-      type,
-    });
-    const data = response.json() as { isRisky: boolean };
+    const data = await callAntiSpam('ai_check', { content, type });
 
     return {
-      allowed: !data.isRisky,
-      reason: data.isRisky
+      allowed: !data.is_risky,
+      reason: data.is_risky
         ? '本平台檢測到您的內容可能涉及詐騙或非法交易。為了保護買家安全，我們無法發布此內容。'
         : undefined,
       layer: 4,
     };
-  } catch (error) {
-    console.error('AI security check failed:', error);
-    // 失敗時默認允許（不中斷用戶體驗），但記錄日誌供人工審查
-    return {
-      allowed: true,
-      layer: 4,
-    };
+  } catch {
+    return { allowed: true, layer: 4 };
   }
 }
 
@@ -130,7 +112,7 @@ export async function checkWithAI(
  */
 export async function performFullListingCheck(
   userId: string,
-  listing: ListingSecurityCheck
+  listing: ListingSecurityCheck,
 ): Promise<AntiSpamCheckResult> {
   // 層 1: 冷卻期
   const cooldownCheck = await checkCooldown(userId);
@@ -145,25 +127,17 @@ export async function performFullListingCheck(
   if (!limitCheck.allowed) return limitCheck;
 
   // 層 4: AI 詐騙防護
-  const aiCheck = await checkWithAI(
-    `${listing.title}\n${listing.description || ''}`,
-    'listing'
-  );
+  const aiCheck = await checkWithAI(`${listing.title}\n${listing.description ?? ''}`, 'listing');
   if (!aiCheck.allowed) return aiCheck;
 
   return { allowed: true };
 }
 
 /**
- * 全面的消息前檢查（層 1、4）
+ * 訊息只做層 4（AI 詐騙防護）；聊天不套冷卻期與每日額度。
  */
-export async function performFullMessageCheck(
-  content: string,
-  conversationId: string
-): Promise<AntiSpamCheckResult> {
-  // 對消息只執行層 4: AI 詐騙防護
-  const aiCheck = await checkWithAI(content, 'message');
-  return aiCheck;
+export function performFullMessageCheck(content: string): Promise<AntiSpamCheckResult> {
+  return checkWithAI(content, 'message');
 }
 
 /**
@@ -173,6 +147,7 @@ export function useListingRateLimit(userId: string) {
   return useQuery({
     queryKey: ['listing-rate-limit', userId],
     queryFn: () => checkDailyLimit(userId),
+    enabled: !!userId,
     staleTime: 30 * 1000, // 30 秒快取
   });
 }
@@ -182,10 +157,7 @@ export function useListingRateLimit(userId: string) {
  */
 export function useConfirmListing(userId: string) {
   return useMutation({
-    mutationFn: async () => {
-      const response = await BACKEND.http.post(`/anti-spam/confirm-listing/${userId}`, {});
-      return response.json();
-    },
+    mutationFn: () => callAntiSpam('confirm_listing', { userId }),
   });
 }
 
@@ -194,9 +166,6 @@ export function useConfirmListing(userId: string) {
  */
 export function useUnlockWithAd(userId: string) {
   return useMutation({
-    mutationFn: async () => {
-      const response = await BACKEND.http.post(`/anti-spam/unlock-with-ad/${userId}`, {});
-      return response.json();
-    },
+    mutationFn: () => callAntiSpam('unlock_with_ad', { userId }),
   });
 }

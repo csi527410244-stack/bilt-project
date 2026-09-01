@@ -1,21 +1,17 @@
 /**
  * App Store 評分觸發器
- * 
+ *
  * 觸發條件：
  * 1. 新賣家成功發布第 3 件商品
  * 2. 用戶發送總共 5 條聊天消息
  */
 
 import { useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as StoreReview from 'expo-store-review';
 import { useBrandToast } from '@/components/brand/BrandToast';
 
 export type AppReviewTriggerType = 'seller_3rd_product' | 'buyer_5_messages';
-
-interface AppReviewConfig {
-  isAvailable: boolean;
-  isRequested: boolean;
-}
 
 const REVIEW_STORAGE_KEY = 'app-review-requested';
 
@@ -24,7 +20,7 @@ const REVIEW_STORAGE_KEY = 'app-review-requested';
  */
 async function isReviewAlreadyRequested(): Promise<boolean> {
   try {
-    const value = await globalThis.localStorage?.getItem(REVIEW_STORAGE_KEY);
+    const value = await AsyncStorage.getItem(REVIEW_STORAGE_KEY);
     return value === 'true';
   } catch {
     return false;
@@ -36,7 +32,7 @@ async function isReviewAlreadyRequested(): Promise<boolean> {
  */
 async function markReviewAsRequested(): Promise<void> {
   try {
-    await globalThis.localStorage?.setItem(REVIEW_STORAGE_KEY, 'true');
+    await AsyncStorage.setItem(REVIEW_STORAGE_KEY, 'true');
   } catch {
     // 忽略儲存錯誤
   }
@@ -75,25 +71,29 @@ export async function triggerAppReview(triggerType: AppReviewTriggerType): Promi
 export function useAppReviewTrigger() {
   const { toast } = useBrandToast();
 
-  return useCallback((triggerType: AppReviewTriggerType) => {
-    // 非同步觸發，不阻塞 UI
-    triggerAppReview(triggerType).catch((error) => {
-      console.error('Failed to trigger app review:', error);
-    });
+  return useCallback(
+    (triggerType: AppReviewTriggerType) => {
+      // 非同步觸發，不阻塞 UI
+      triggerAppReview(triggerType).catch((error) => {
+        console.error('Failed to trigger app review:', error);
+      });
 
-    // 向用戶顯示可選的評分提示
-    if (triggerType === 'seller_3rd_product') {
-      toast.show({
-        variant: 'success',
-        label: '🎉 喜歡完全免費、0% 抽成的極貨網嗎？點擊下方按鈕在商店留下 5 星好評，這就是對我們最大的支持！',
-      });
-    } else if (triggerType === 'buyer_5_messages') {
-      toast.show({
-        variant: 'success',
-        label: '🎉 感謝您使用極貨網！若您滿意我們的服務，請在商店留下 5 星好評。',
-      });
-    }
-  }, [toast]);
+      // 向用戶顯示可選的評分提示
+      if (triggerType === 'seller_3rd_product') {
+        toast.show({
+          variant: 'success',
+          label:
+            '🎉 喜歡完全免費、0% 抽成的極貨網嗎？點擊下方按鈕在商店留下 5 星好評，這就是對我們最大的支持！',
+        });
+      } else if (triggerType === 'buyer_5_messages') {
+        toast.show({
+          variant: 'success',
+          label: '🎉 感謝您使用極貨網！若您滿意我們的服務，請在商店留下 5 星好評。',
+        });
+      }
+    },
+    [toast],
+  );
 }
 
 /**
@@ -101,7 +101,7 @@ export function useAppReviewTrigger() {
  */
 export function checkAndTriggerSellerReview(publishedProductCount: number): void {
   if (publishedProductCount === 3) {
-    triggerAppReview('seller_3rd_product');
+    void triggerAppReview('seller_3rd_product');
   }
 }
 
@@ -110,6 +110,6 @@ export function checkAndTriggerSellerReview(publishedProductCount: number): void
  */
 export function checkAndTriggerBuyerReview(totalMessagesSent: number): void {
   if (totalMessagesSent === 5) {
-    triggerAppReview('buyer_5_messages');
+    void triggerAppReview('buyer_5_messages');
   }
 }

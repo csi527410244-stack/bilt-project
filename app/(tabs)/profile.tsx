@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { Avatar, Button, Chip, Typography } from 'heroui-native';
 import { useBrandToast } from '@/components/brand/BrandToast';
-import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import {
   Bell,
@@ -251,9 +250,7 @@ export default function ProfileScreen() {
 
         <View className="mt-6 items-center gap-1">
           <Typography type="body-xs" color="muted">
-            <NoTranslate>
-              © 2026 創極數位資訊企業社 -極貨網 JIHUOWANG 版本 1.0.0
-            </NoTranslate>
+            <NoTranslate>© 2026 創極數位資訊企業社 -極貨網 JIHUOWANG 版本 1.0.0</NoTranslate>
           </Typography>
         </View>
       </ScrollView>

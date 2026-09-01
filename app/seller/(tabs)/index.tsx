@@ -4,4 +4,3 @@ import { MarketHome } from '@/components/MarketHome';
 export default function SellerHomeScreen() {
   return <MarketHome />;
 }
-

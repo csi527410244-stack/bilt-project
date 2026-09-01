@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { Button, SearchField, Typography } from 'heroui-native';
 import { router } from 'expo-router';
 import { Bell, ChevronRight, LayoutGrid, ShoppingCart, AlertCircle } from 'lucide-react-native';
@@ -187,7 +187,7 @@ export function MarketHome({ showLaunchAd = true }: Props) {
         </View>
 
         {/* 平台提醒橫幅 - 防詐騙警告 */}
-        <View className="mx-4 mt-2 mb-2 flex-row items-center gap-2 rounded-lg bg-yellow-50 p-3 border border-yellow-200">
+        <View className="mx-4 mt-2 mb-2 flex-row items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
           <AlertCircle size={16} color="#D97706" style={{ flexShrink: 0 }} />
           <Typography
             type="body-xs"
@@ -276,7 +276,7 @@ export function MarketHome({ showLaunchAd = true }: Props) {
           <View className="flex-row gap-3" style={{ height: 140 }}>
             {/* 左側大瓷磚 - 促銷文本 */}
             <Pressable
-              className="flex-1 bg-brand-blue rounded-2xl p-4 items-start justify-between"
+              className="bg-brand-blue flex-1 items-start justify-between rounded-2xl p-4"
               style={{
                 shadowColor: BRAND.blue,
                 shadowOffset: { width: 0, height: 2 },
@@ -300,11 +300,11 @@ export function MarketHome({ showLaunchAd = true }: Props) {
             </Pressable>
 
             {/* 右側小瓷磚 - 前 2 個類別 */}
-            <View className="flex-1 gap-3 flex-col">
-              {(categories ?? []).slice(0, 2).map((category, idx) => (
+            <View className="flex-1 flex-col gap-3">
+              {(categories ?? []).slice(0, 2).map((category) => (
                 <Pressable
                   key={category.id}
-                  className="flex-1 bg-surface rounded-2xl p-3 items-center justify-center"
+                  className="bg-surface flex-1 items-center justify-center rounded-2xl p-3"
                   style={{
                     shadowColor: BRAND.blue,
                     shadowOffset: { width: 0, height: 2 },
@@ -322,9 +322,8 @@ export function MarketHome({ showLaunchAd = true }: Props) {
                   <CategoryIcon name={category.icon} size={24} color={BRAND.navy} />
                   <Typography
                     type="body-xs"
-                    className="text-navy mt-2"
+                    className="text-navy mt-2 text-center"
                     numberOfLines={1}
-                    textAlign="center"
                     style={{ fontWeight: '600' }}
                   >
                     {category.name}
@@ -339,7 +338,7 @@ export function MarketHome({ showLaunchAd = true }: Props) {
             {(categories ?? []).slice(2, 5).map((category) => (
               <Pressable
                 key={category.id}
-                className="bg-surface rounded-xl p-2.5 items-center justify-center flex-1"
+                className="bg-surface flex-1 items-center justify-center rounded-xl p-2.5"
                 style={{
                   minWidth: '31%',
                   shadowColor: BRAND.blue,
@@ -358,9 +357,8 @@ export function MarketHome({ showLaunchAd = true }: Props) {
                 <CategoryIcon name={category.icon} size={20} color={BRAND.navy} />
                 <Typography
                   type="body-xs"
-                  className="text-navy mt-1"
+                  className="text-navy mt-1 text-center"
                   numberOfLines={1}
-                  textAlign="center"
                   style={{ fontWeight: '500' }}
                 >
                   {category.name}
@@ -369,7 +367,7 @@ export function MarketHome({ showLaunchAd = true }: Props) {
             ))}
             {/* 全部分類快捷按鈕 */}
             <Pressable
-              className="bg-brand-orange rounded-xl p-2.5 items-center justify-center flex-1"
+              className="bg-brand-orange flex-1 items-center justify-center rounded-xl p-2.5"
               style={{
                 minWidth: '31%',
                 shadowColor: BRAND.orange,
@@ -383,8 +381,7 @@ export function MarketHome({ showLaunchAd = true }: Props) {
               <LayoutGrid size={20} color={BRAND.white} />
               <Typography
                 type="body-xs"
-                className="text-white mt-1"
-                textAlign="center"
+                className="mt-1 text-center text-white"
                 style={{ fontWeight: '600' }}
               >
                 全部分類

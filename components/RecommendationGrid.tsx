@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Spinner, Typography } from 'heroui-native';
 import { Sparkles } from 'lucide-react-native';
 
@@ -41,7 +41,7 @@ export function RecommendationGrid({
   const forYou = useForYouProducts(seedIds ?? [], limit, !productId);
 
   const query = productId ? similar : forYou;
-  const products = query.data?.products ?? [];
+  const products = useMemo(() => query.data?.products ?? [], [query.data]);
   const reason = query.data?.reason ?? '';
 
   // 將產品和廣告混合在一個平坦列表中，每 4 個產品後插入廣告
@@ -95,7 +95,7 @@ export function RecommendationGrid({
       <FlatList
         data={gridData}
         numColumns={2}
-        keyExtractor={(item, index) => {
+        keyExtractor={(item) => {
           if (item.type === 'header') return 'header';
           if (item.type === 'ad') return item.adId;
           return item.product.id;
@@ -112,12 +112,12 @@ export function RecommendationGrid({
             return (
               <View
                 style={{ width: '100%', height: 240, marginHorizontal: 0 }}
-                className="bg-surface rounded-2xl items-center justify-center mb-3"
+                className="bg-surface mb-3 items-center justify-center rounded-2xl"
               >
                 <Typography type="body-xs" color="muted">
                   Google AdMob 廣告
                 </Typography>
-                {/* 
+                {/*
                   實際的 Google AdMob Native Ad 會在這裡渲染
                   TODO: 集成 react-native-google-mobile-ads
                   <GoogleMobileAdsNativeAd adUnitID="ca-app-pub-xxxxx" />

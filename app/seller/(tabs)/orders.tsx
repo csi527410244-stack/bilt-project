@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Animated, FlatList, Pressable, View } from 'react-native';
-import { Button, Chip, Spinner, Typography } from 'heroui-native';
+import { Button, Spinner, Typography } from 'heroui-native';
 import { useBrandToast } from '@/components/brand/BrandToast';
 import { router } from 'expo-router';
 import { ClipboardList } from 'lucide-react-native';
@@ -158,10 +158,9 @@ export default function SellerOrdersScreen() {
           keyExtractor={(item) => item.id}
           contentContainerClassName="p-4 gap-3 pb-6"
           scrollEventThrottle={16}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: false },
-          )}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+            useNativeDriver: false,
+          })}
           onScrollToIndexFailed={(info) => scrollToIndexFallback(listRef, info)}
           ListEmptyComponent={
             narrowed && all.length > 0 ? (

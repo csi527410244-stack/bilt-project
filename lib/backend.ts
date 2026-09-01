@@ -1,9 +1,10 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { asyncStorage, createClient, webStorage } from '@biltme/backend';
+import { createClient } from '@supabase/supabase-js';
 
 import type {
   AccountResponses,
+  AntiSpamResponses,
   CoinResponses,
   GeocodeHit,
   LogisticsNotifyResponses,
@@ -16,16 +17,17 @@ import type {
   RecommendResponses,
 } from '@/lib/api/contracts';
 
-const url = process.env.EXPO_PUBLIC_BILT_URL;
-const anonKey = process.env.EXPO_PUBLIC_BILT_ANON_KEY;
+const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const anonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 if (!url || !anonKey) {
-  throw new Error('Missing EXPO_PUBLIC_BILT_URL / EXPO_PUBLIC_BILT_ANON_KEY');
+  throw new Error('Missing EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
 }
 
 export const bilt = createClient(url, anonKey, {
   auth: {
-    storage: Platform.OS === 'web' ? webStorage() : asyncStorage(AsyncStorage),
+    // Native has no localStorage; the web build keeps supabase-js's own default.
+    storage: Platform.OS === 'web' ? undefined : AsyncStorage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
@@ -234,6 +236,25 @@ export function callGeocode(queries: string[]): Promise<GeocodeHit> {
 }
 
 export type RecommendAction = keyof RecommendResponses;
+
+export type AntiSpamAction = keyof AntiSpamResponses;
+
+/**
+ * Calls the `anti-spam` edge function: listing cooldown, duplicate titles,
+ * daily quota and the AI fraud check. Every limit is decided server-side —
+ * counters kept in the app can be reset by reinstalling it.
+ */
+export function callAntiSpam<A extends AntiSpamAction>(
+  action: A,
+  payload: Record<string, unknown> = {},
+): Promise<AntiSpamResponses[A]> {
+  return invokeEdge<AntiSpamResponses[A]>(
+    'anti-spam',
+    action,
+    payload,
+    '安全檢查服務暫時無法使用，請稍後再試',
+  );
+}
 
 export type PriceWatchAction = keyof PriceWatchResponses;
 

@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { create } from 'zustand';
-import type { Session } from '@biltme/backend';
+import type { Session } from '@supabase/supabase-js';
 
 import { bilt } from '@/lib/backend';
 import { unregisterPushToken } from '@/lib/pushToken';

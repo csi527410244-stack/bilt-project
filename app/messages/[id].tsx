@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
 import { Input, Spinner, Typography } from 'heroui-native';
 import { useBrandToast } from '@/components/brand/BrandToast';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -276,14 +283,10 @@ export default function ChatScreen() {
               className="mb-2"
               contentContainerClassName="gap-2 px-1"
             >
-              {[
-                '請問還有現貨嗎？',
-                '今天能出貨嗎？',
-                '請問可以面交嗎？',
-              ].map((text) => (
+              {['請問還有現貨嗎？', '今天能出貨嗎？', '請問可以面交嗎？'].map((text) => (
                 <Pressable
                   key={text}
-                  className="bg-surface-secondary rounded-full px-3 py-1.5 border border-border"
+                  className="bg-surface-secondary border-border rounded-full border px-3 py-1.5"
                   onPress={() => {
                     setDraft(text);
                   }}
@@ -303,7 +306,7 @@ export default function ChatScreen() {
                   // TODO: 集成 ImagePicker
                   // openImagePicker();
                   toast.show({
-                    variant: 'info',
+                    variant: 'default',
                     label: '照片上傳功能將在下一版本推出',
                   });
                 }}
