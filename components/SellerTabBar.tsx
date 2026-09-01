@@ -1,0 +1,132 @@
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, View } from 'react-native';
+import { Typography } from 'heroui-native';
+import { router, usePathname, type Href } from 'expo-router';
+import { LayoutGrid, MessageCircle, Plus, Receipt, User } from 'lucide-react-native';
+
+import { BRAND } from '@/lib/brand';
+
+type Item = {
+  label: string;
+  href: Href;
+  match: string;
+  icon: typeof LayoutGrid;
+  /** 發布用實心圓底突顯，其他是一般的圖示 + 文字。 */
+  filled?: boolean;
+};
+
+/**
+ * 賣家分頁：首頁（與買家首頁共用）、發布、訂單、訊息、我的。
+ *
+ * 「首頁」與買家首頁是同一份內容 —— 賣家從賣家首頁直接進入買家商品首頁。
+ */
+const ITEMS: Item[] = [
+  { label: '首頁', href: '/seller', match: '/seller', icon: LayoutGrid },
+  {
+    label: '發布',
+    href: '/seller/new-product',
+    match: '/seller/new-product',
+    icon: Plus,
+    filled: true,
+  },
+  { label: '訂單', href: '/seller/orders', match: '/seller/orders', icon: Receipt },
+  { label: '訊息', href: '/seller/messages', match: '/seller/messages', icon: MessageCircle },
+  { label: '我的', href: '/seller/account', match: '/seller/account', icon: User },
+];
+
+function TabItem({
+  item,
+  selected,
+  isCurrent,
+  onNavigate,
+}: {
+  item: Item;
+  /** 要不要畫成選取中（含「已按下、還在換頁」的那一段）。 */
+  selected: boolean;
+  /** 目前真的站在這一頁。 */
+  isCurrent: boolean;
+  onNavigate: (match: string) => void;
+}) {
+  const onPress = () => {
+    // 已經站在這一頁就不要再導覽一次。
+    if (isCurrent) return;
+    if (item.filled) {
+      router.push(item.href);
+      return;
+    }
+    // 先把目標標成選取中：在賣家分頁之間切換是即時的，但從推入的頁面
+    // （商品管理、評價…）回到分頁時還要退一層，沒有立即回饋會像沒點到。
+    onNavigate(item.match);
+    // navigate 而不是 replace：分頁之間會直接切換焦點（畫面留在記憶體，不重新掛載），
+    // 從推入的頁面按分頁列則是退回已存在的分頁畫面。
+    router.navigate(item.href);
+  };
+
+  return (
+    <Pressable
+      className="flex-1 items-center gap-1 py-1"
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={item.label}
+      // 手指按到分頁列邊緣（含安全區內縮的那一段）也算，並且按下就立刻變色 ——
+      // 導覽本身要一小段時間，沒有立即回饋就會覺得點不到。
+      hitSlop={{ top: 10, bottom: 10, left: 2, right: 2 }}
+      android_ripple={{ color: 'rgba(8, 38, 107, 0.10)', borderless: true }}
+      style={Platform.OS === 'web' ? { cursor: 'pointer' } : undefined}
+      onPress={onPress}
+    >
+      {({ pressed }) => {
+        const color = selected || pressed ? BRAND.orange : BRAND.muted;
+        return (
+          <View className="items-center gap-1" style={{ opacity: pressed ? 0.7 : 1 }}>
+            {item.filled ? (
+              <View
+                className="items-center justify-center rounded-full"
+                style={{ width: 26, height: 26, backgroundColor: BRAND.blue }}
+              >
+                <item.icon size={18} color={BRAND.white} strokeWidth={2.8} />
+              </View>
+            ) : (
+              <item.icon size={22} color={color} />
+            )}
+            <Typography type="body-xs" numberOfLines={1} style={{ color, fontWeight: '600' }}>
+              {item.label}
+            </Typography>
+          </View>
+        );
+      }}
+    </Pressable>
+  );
+}
+
+/**
+ * 賣家介面的底部分頁列。與買家分頁列是兩套完全獨立的導覽：買家看到的是
+ * 首頁／分類／購物車／訊息／我的，賣家看到的是市集／首頁／發布／訂單／訊息／我的。
+ *
+ * 兩個用法，長相完全一樣：
+ * 1. app/seller/(tabs)/_layout.tsx 的自訂 tabBar —— 分頁畫面留在記憶體，切分頁是即時的。
+ * 2. 推入的賣家頁面（商品管理、評價、J幣…）自己渲染一份，按下會退回對應的分頁。
+ *
+ * 兩種情形都用 pathname 判斷選取狀態；按下時先樂觀染色（pending），路徑更新後交還給 pathname。
+ */
+export function SellerTabBar() {
+  const pathname = usePathname();
+  const [pending, setPending] = useState<string | null>(null);
+
+  // 路徑已經換過去（或使用者用返回鍵離開）就把樂觀狀態交還給真實路徑。
+  useEffect(() => setPending(null), [pathname]);
+
+  return (
+    <View className="border-border bg-surface pb-safe-offset-2 w-full flex-row border-t pt-2">
+      {ITEMS.map((item) => (
+        <TabItem
+          key={item.label}
+          item={item}
+          selected={pending ? pending === item.match : pathname === item.match}
+          isCurrent={pathname === item.match}
+          onNavigate={setPending}
+        />
+      ))}
+    </View>
+  );
+}

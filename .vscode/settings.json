@@ -1,0 +1,8 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^git checkout --ours \"components/ShipmentStatusBar\\.tsx\" \"app/seller/\\(tabs\\)/orders\\.tsx\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}

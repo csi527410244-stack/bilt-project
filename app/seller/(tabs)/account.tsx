@@ -1,0 +1,448 @@
+import type { ReactNode } from 'react';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { Avatar, Button, Spinner, Typography } from 'heroui-native';
+import { router } from 'expo-router';
+import {
+  BarChart3,
+  ChevronRight,
+  Coins,
+  LifeBuoy,
+  LogOut,
+  Megaphone,
+  Package,
+  Plus,
+  Receipt,
+  Repeat,
+  Settings,
+  Star,
+  Store as StoreIcon,
+  Ticket,
+  UserCog,
+} from 'lucide-react-native';
+
+import { AppImage } from '@/components/AppImage';
+import { EmptyState } from '@/components/EmptyState';
+import { ScreenBackButton } from '@/components/ScreenBackButton';
+import { SignInRequired } from '@/components/SignInRequired';
+import { LinearGradient } from '@/components/ui/primitives/LinearGradient';
+import { useCoinSummary } from '@/lib/api/coins';
+import { useMyStoreQuery, useSellerDashboard } from '@/lib/api/seller';
+import { protectBrand } from '@/components/brand/BrandText';
+import { BRAND } from '@/lib/brand';
+import { formatNumber, formatPrice } from '@/lib/format';
+import { exitSellerMode } from '@/lib/mode';
+import { useSessionStore, useUserId } from '@/lib/session';
+import { COIN_NAME } from '@/lib/types';
+
+/**
+ * 每一個管理入口自己的配色：圖示色 + 圖示底色。單一藍色的清單很難掃讀，
+ * 所以每一列給一個固定色相，位置與顏色一起記。
+ */
+const ROW_TINT = {
+  product: { icon: BRAND.blue, soft: BRAND.blueSoft },
+  order: { icon: BRAND.orange, soft: BRAND.orangeSoft },
+  coupon: { icon: '#F2497D', soft: '#FFE7EF' },
+  analytics: { icon: '#6D5AE6', soft: '#ECE9FF' },
+  review: { icon: '#F5A524', soft: '#FFF4DC' },
+  promote: { icon: '#FB5A5A', soft: '#FFE9E9' },
+  store: { icon: '#00A6A6', soft: '#DFF5F5' },
+  profile: { icon: '#5B6CFF', soft: '#E8EBFF' },
+  support: { icon: '#16A34A', soft: '#E3F7EA' },
+  signOut: { icon: BRAND.danger, soft: '#FDE8E6' },
+} as const;
+
+type RowTint = keyof typeof ROW_TINT;
+
+/**
+ * 賣家中心的一列入口。每一列自己就是一張卡（彼此之間留間距），圖示帶自己的色系，
+ * 字級收斂成手機上好讀的大小。
+ */
+function MenuRow({
+  icon: Icon,
+  title,
+  tint,
+  onPress,
+  danger = false,
+}: {
+  icon: typeof Package;
+  title: string;
+  tint: RowTint;
+  onPress: () => void;
+  danger?: boolean;
+}) {
+  const { icon: iconColor, soft } = ROW_TINT[tint];
+  return (
+    <Pressable
+      className="bg-surface mx-4 mt-2 flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.9 : 1,
+        ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+      })}
+      onPress={onPress}
+    >
+      <View
+        className="h-9 w-9 items-center justify-center rounded-xl"
+        style={{ backgroundColor: soft }}
+      >
+        <Icon size={18} color={iconColor} />
+      </View>
+      <Typography
+        className={danger ? 'text-danger flex-1' : 'text-navy flex-1'}
+        style={{ fontSize: 14, lineHeight: 19, fontWeight: '600' }}
+      >
+        {title}
+      </Typography>
+      <ChevronRight size={17} color={BRAND.muted} />
+    </Pressable>
+  );
+}
+
+/**
+ * 「我的」頁首：返回鍵 + 店鋪資料。店鋪還在載入時也照樣畫出來，
+ * 頁首整塊消失只剩轉圈圈會讓人以為畫面壞了。
+ */
+function AccountHeader({ children }: { children: ReactNode }) {
+  return (
+    <View className="bg-surface pt-safe px-4 pb-4">
+      <View className="pt-2">
+        <ScreenBackButton fallback="/seller" />
+      </View>
+      <View className="mt-2 flex-row items-center gap-3">{children}</View>
+    </View>
+  );
+}
+
+function StoreThumbFallback() {
+  return (
+    <View
+      className="h-12 w-12 items-center justify-center rounded-2xl"
+      style={{ backgroundColor: BRAND.blueSoft }}
+    >
+      <StoreIcon size={22} color={BRAND.blue} />
+    </View>
+  );
+}
+
+/** 賣家介面的「我的」：店鋪、本月營收、上架捷徑、J幣與各項管理入口。 */
+export default function SellerAccountScreen() {
+  const userId = useUserId();
+  const profile = useSessionStore((s) => s.profile);
+  const account = useSessionStore((s) => s.account);
+  const signOut = useSessionStore((s) => s.signOut);
+  const { data: store, isLoading } = useMyStoreQuery(userId);
+  const { data: stats, isLoading: statsLoading } = useSellerDashboard(userId, store?.id ?? null);
+  const { data: coins } = useCoinSummary(userId);
+
+  if (!userId) {
+    return (
+      <View className="bg-background pt-safe flex-1">
+        <SignInRequired title="登入後進入賣家中心" />
+      </View>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View className="bg-background flex-1">
+        <AccountHeader>
+          <StoreThumbFallback />
+          <View className="flex-1">
+            <Typography type="h5" className="text-navy" style={{ fontWeight: '700' }}>
+              賣家中心
+            </Typography>
+            <Typography type="body-xs" color="muted">
+              正在載入店鋪資料…
+            </Typography>
+          </View>
+        </AccountHeader>
+        <View className="flex-1 items-center justify-center">
+          <Spinner />
+        </View>
+      </View>
+    );
+  }
+
+  if (!store) {
+    return (
+      <View className="bg-background flex-1">
+        <EmptyState
+          icon={<StoreIcon size={26} color={BRAND.blue} />}
+          title="還沒有極貨網店鋪"
+          description="建立店鋪後才會有賣家介面。"
+          action={
+            <Button onPress={() => router.replace('/seller/onboarding')}>
+              <Button.Label>申請成為賣家</Button.Label>
+            </Button>
+          }
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View className="bg-background flex-1">
+      <ScrollView className="flex-1" contentContainerClassName="pb-8">
+        <AccountHeader>
+          {store.logo_url ? (
+            <AppImage uri={store.logo_url} className="h-12 w-12 rounded-2xl" />
+          ) : (
+            <StoreThumbFallback />
+          )}
+          <View className="flex-1">
+            <Typography
+              numberOfLines={1}
+              className="text-navy"
+              style={{ fontSize: 16, lineHeight: 21, fontWeight: '700' }}
+            >
+              {store.name}
+            </Typography>
+            <Typography
+              color="muted"
+              numberOfLines={1}
+              style={{ fontSize: 12, lineHeight: 16, fontWeight: '500' }}
+            >
+              評價 {store.rating.toFixed(1)}（{formatNumber(store.rating_count)}）
+            </Typography>
+          </View>
+          <Pressable
+            className="h-10 w-10 items-center justify-center"
+            accessibilityLabel="店鋪設定"
+            onPress={() => router.push('/seller/store')}
+          >
+            <Settings size={20} color={BRAND.navy} />
+          </Pressable>
+        </AccountHeader>
+
+        {/* 左邊點進銷售分析、右邊點進訂單管理 —— 兩個都是站內頁面，不會把人丟到綠界首頁。 */}
+        {!statsLoading && stats ? (
+          <View className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-4">
+            <Pressable
+              className="flex-1"
+              accessibilityRole="button"
+              accessibilityLabel="查看銷售分析"
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.6 : 1,
+                ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+              })}
+              onPress={() => router.push('/seller/analytics')}
+            >
+              <Typography type="body-xs" color="muted">
+                本月營收
+              </Typography>
+              <Typography
+                numberOfLines={1}
+                className="text-navy"
+                style={{ fontSize: 18, lineHeight: 24, fontWeight: '700' }}
+              >
+                {formatPrice(stats.monthRevenue ?? 0)}
+              </Typography>
+            </Pressable>
+            <Pressable
+              className="items-end"
+              accessibilityRole="button"
+              accessibilityLabel="查看待處理訂單"
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.6 : 1,
+                ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+              })}
+              onPress={() => router.navigate('/seller/orders')}
+            >
+              <Typography type="body-xs" color="muted">
+                商品 / 待處理訂單
+              </Typography>
+              <Typography
+                numberOfLines={1}
+                className="text-navy text-right"
+                style={{ fontSize: 18, lineHeight: 24, fontWeight: '700' }}
+              >
+                {formatNumber(stats.productCount ?? 0)} / {formatNumber(stats.pendingOrders ?? 0)}
+              </Typography>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {/* 上架商品是賣家最常做的事，所以獨立成一顆大按鈕。 */}
+        <Pressable
+          className="mx-4 mt-3 overflow-hidden rounded-2xl"
+          accessibilityRole="button"
+          accessibilityLabel="新增商品"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.9 : 1,
+            ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+          })}
+          onPress={() => router.push('/seller/new-product')}
+        >
+          <LinearGradient
+            colors={[BRAND.orange, BRAND.yellow]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            className="flex-row items-center justify-center gap-2 py-4"
+          >
+            <Plus size={19} color={BRAND.white} strokeWidth={2.8} />
+            <Typography
+              className="text-white"
+              style={{ fontSize: 15, lineHeight: 20, fontWeight: '700' }}
+            >
+              新增商品
+            </Typography>
+          </LinearGradient>
+        </Pressable>
+
+        <Pressable
+          className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
+          onPress={() => router.push('/seller/coins')}
+        >
+          <View
+            className="h-9 w-9 items-center justify-center rounded-xl"
+            style={{ backgroundColor: BRAND.orangeSoft }}
+          >
+            <Coins size={18} color={BRAND.orange} />
+          </View>
+          <View className="flex-1">
+            <Typography type="body-xs" color="muted">
+              我的{COIN_NAME}
+              {coins?.wallet.checkedInToday === false ? ' · 今天還沒簽到' : ''}
+            </Typography>
+            <Typography
+              className="text-navy"
+              style={{ fontSize: 17, lineHeight: 23, fontWeight: '700' }}
+            >
+              {formatNumber(coins?.wallet.balance ?? 0)}
+            </Typography>
+          </View>
+          <Pressable
+            className="flex-row items-center"
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="賺幣換曝光"
+            onPress={() => router.push('/seller/promote')}
+          >
+            <Typography type="body-sm" className="text-brand-orange" style={{ fontWeight: '700' }}>
+              賺幣換曝光
+            </Typography>
+            <ChevronRight size={16} color={BRAND.orange} />
+          </Pressable>
+        </Pressable>
+
+        <MenuRow
+          icon={Package}
+          tint="product"
+          title="商品管理"
+          onPress={() => router.push('/seller/products')}
+        />
+        <MenuRow
+          icon={Receipt}
+          tint="order"
+          title="訂單管理"
+          onPress={() => router.navigate('/seller/orders')}
+        />
+        <MenuRow
+          icon={Ticket}
+          tint="coupon"
+          title="優惠券與折扣碼"
+          onPress={() => router.push('/seller/coupons')}
+        />
+        <MenuRow
+          icon={BarChart3}
+          tint="analytics"
+          title="銷售分析"
+          onPress={() => router.push('/seller/analytics')}
+        />
+        <MenuRow
+          icon={Star}
+          tint="review"
+          title="買家評價與回覆"
+          onPress={() => router.push('/seller/reviews')}
+        />
+        <MenuRow
+          icon={Megaphone}
+          tint="promote"
+          title="推廣中心"
+          onPress={() => router.push('/seller/promote')}
+        />
+        <MenuRow
+          icon={StoreIcon}
+          tint="store"
+          title="店鋪與出貨設定"
+          onPress={() => router.push('/seller/store')}
+        />
+
+        {/* 買家與賣家是兩套介面：切回買家端的入口放在這裡，各分頁不再放介面切換鍵。 */}
+        <Pressable
+          className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-4"
+          accessibilityRole="button"
+          accessibilityLabel="回到買家介面"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.9 : 1,
+            ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+          })}
+          onPress={exitSellerMode}
+        >
+          <View
+            className="h-9 w-9 items-center justify-center rounded-xl"
+            style={{ backgroundColor: BRAND.orangeSoft }}
+          >
+            <Repeat size={18} color={BRAND.orange} />
+          </View>
+          <View className="flex-1">
+            <Typography
+              type="body-sm"
+              className="text-navy"
+              style={{ fontWeight: '600', fontSize: 14, lineHeight: 19 }}
+            >
+              回到買家介面
+            </Typography>
+            <Typography type="body-xs" color="muted" numberOfLines={1}>
+              購物車、收藏與我的訂單都在那一邊
+            </Typography>
+          </View>
+          <ChevronRight size={18} color={BRAND.muted} />
+        </Pressable>
+
+        <View className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-3.5">
+          <Avatar size="sm" alt={profile?.display_name ?? '會員'}>
+            {profile?.avatar_url ? <Avatar.Image source={{ uri: profile.avatar_url }} /> : null}
+            <Avatar.Fallback />
+          </Avatar>
+          <View className="flex-1">
+            <Typography
+              type="body-sm"
+              numberOfLines={1}
+              className="text-navy"
+              style={{ fontWeight: '600' }}
+            >
+              {protectBrand(profile?.display_name ?? '極貨網會員')}
+            </Typography>
+            <Typography type="body-xs" color="muted" numberOfLines={1}>
+              {account?.email ?? ''}
+            </Typography>
+          </View>
+        </View>
+        <MenuRow
+          icon={UserCog}
+          tint="profile"
+          title="編輯個人資料"
+          onPress={() => router.push('/profile/edit')}
+        />
+        <MenuRow
+          icon={LifeBuoy}
+          tint="support"
+          title="聯絡我們"
+          onPress={() => router.push('/support/contact')}
+        />
+        <MenuRow
+          icon={LogOut}
+          tint="signOut"
+          title="登出"
+          danger
+          onPress={() => {
+            exitSellerMode();
+            void signOut();
+          }}
+        />
+      </ScrollView>
+    </View>
+  );
+}

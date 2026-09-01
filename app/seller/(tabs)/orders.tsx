@@ -1,0 +1,317 @@
+import { useCallback, useRef, useState } from 'react';
+import { Animated, FlatList, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button, Spinner, Typography } from 'heroui-native';
+import { useBrandToast } from '@/components/brand/BrandToast';
+import { router } from 'expo-router';
+import { ClipboardList } from 'lucide-react-native';
+
+import { AppImage } from '@/components/AppImage';
+import { EmptyState } from '@/components/EmptyState';
+import { LogisticsPanel } from '@/components/LogisticsPanel';
+import { SegmentedControl, type Segment } from '@/components/SegmentedControl';
+import { ScreenBackButton } from '@/components/ScreenBackButton';
+import {
+  matchesShipmentFilter,
+  ShipmentStatusBar,
+  type ShipmentFilter,
+} from '@/components/ShipmentStatusBar';
+import { SignInRequired } from '@/components/SignInRequired';
+import { useSetOrderStatus } from '@/lib/api/commerce';
+import { useSellerOrders } from '@/lib/api/seller';
+import { BRAND } from '@/lib/brand';
+import { scrollToIndexFallback, useFocusHighlight } from '@/lib/focus';
+import { formatDateTime, formatNumber, formatPrice } from '@/lib/format';
+import { useUserId } from '@/lib/session';
+import { ORDER_STATUS_LABEL, type Order, type OrderStatus } from '@/lib/types';
+
+type StatusFilter = OrderStatus | 'all';
+
+const FILTERS: Segment<StatusFilter>[] = [
+  { key: 'all', label: '全部' },
+  { key: 'pending', label: '待付款' },
+  { key: 'paid', label: '備貨中' },
+  { key: 'shipped', label: '已出貨' },
+  { key: 'completed', label: '已完成' },
+  { key: 'cancelled', label: '已取消' },
+];
+
+export default function SellerOrdersScreen() {
+  const userId = useUserId();
+  const { toast } = useBrandToast();
+  const insets = useSafeAreaInsets();
+  const [filter, setFilter] = useState<StatusFilter>('all');
+  const [shipment, setShipment] = useState<ShipmentFilter>('all');
+  const { data: orders, isLoading } = useSellerOrders(userId);
+  const setStatus = useSetOrderStatus();
+  const listRef = useRef<FlatList<Order>>(null);
+
+  // 往下滑就把頂部區塊收起來，讓訂單卡片有更多高度。
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  // 還沒量到高度前 inputRange 不能是 [0, 0]，會讓 interpolate 失效。
+  const collapse = Math.max(1, headerHeight);
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, collapse],
+    outputRange: [0, -collapse],
+    extrapolate: 'clamp',
+  });
+
+  const all = orders ?? [];
+  const filtered = all.filter(
+    (order) =>
+      (filter === 'all' || order.status === filter) && matchesShipmentFilter(order, shipment),
+  );
+  const narrowed = filter !== 'all' || shipment !== 'all';
+
+  /* 通知落地：先把篩選收回全部，否則目標訂單可能正好被藏起來。 */
+  const clearFilters = useCallback(() => {
+    setFilter('all');
+    setShipment('all');
+  }, []);
+
+  const focused = useFocusHighlight<Order>({
+    key: 'seller-orders',
+    listRef,
+    items: filtered,
+    // 推播只帶得到訂單編號（通知文字裡的 JHW…），站內清單可能帶 id，兩種都比對。
+    matches: (order, token) => order.id === token || order.order_no === token,
+    onRequest: clearFilters,
+  });
+
+  if (!userId) {
+    return (
+      <View className="bg-background pt-safe flex-1">
+        <SignInRequired title="登入後管理訂單" />
+      </View>
+    );
+  }
+
+  const advance = (orderId: string, status: string, label: string) => {
+    setStatus.mutate(
+      { orderId, status },
+      {
+        onSuccess: () => toast.show({ variant: 'success', label }),
+        onError: (error: Error) => toast.show({ variant: 'danger', label: error.message }),
+      },
+    );
+  };
+
+  return (
+    <View className="bg-background flex-1">
+      {isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <Spinner />
+        </View>
+      ) : (
+        <FlatList
+          ref={listRef}
+          className="flex-1"
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          /* 頂部區塊是浮在清單上的，所以第一張卡片要自己讓開它的高度。 */
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingTop: headerHeight + 16,
+            paddingBottom: 24,
+            gap: 12,
+          }}
+          scrollEventThrottle={16}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+            useNativeDriver: false,
+          })}
+          onScrollToIndexFailed={(info) => scrollToIndexFallback(listRef, info)}
+          ListEmptyComponent={
+            narrowed && all.length > 0 ? (
+              <EmptyState
+                icon={<ClipboardList size={26} color={BRAND.blue} />}
+                title="找不到符合的訂單"
+                description="把訂單狀態與出貨狀態調回全部就會看到所有訂單。"
+                action={
+                  <Button variant="secondary" onPress={clearFilters}>
+                    <Button.Label>清除條件</Button.Label>
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={<ClipboardList size={26} color={BRAND.blue} />}
+                title="還沒有訂單"
+                description="買家下單後會出現在這裡，並發送通知給你。"
+              />
+            )
+          }
+          renderItem={({ item }) => (
+            <View
+              className={
+                focused === item.id || focused === item.order_no
+                  ? 'bg-surface border-brand-orange gap-3 rounded-2xl border-2 p-4'
+                  : 'bg-surface gap-3 rounded-2xl p-4'
+              }
+            >
+              <Pressable
+                className="gap-2"
+                onPress={() => router.push({ pathname: '/orders/[id]', params: { id: item.id } })}
+              >
+                <View className="flex-row items-center justify-between gap-3">
+                  <Typography
+                    type="body-sm"
+                    numberOfLines={1}
+                    className="text-navy flex-1"
+                    style={{ fontWeight: '600' }}
+                  >
+                    {item.order_no}
+                  </Typography>
+                  <View
+                    className={`rounded-full px-3 py-1 ${
+                      item.status === 'cancelled'
+                        ? 'bg-red-100'
+                        : item.status === 'completed'
+                          ? 'bg-green-100'
+                          : item.status === 'pending'
+                            ? 'bg-yellow-100'
+                            : 'bg-blue-100'
+                    }`}
+                  >
+                    <Typography
+                      type="body-xs"
+                      className={`font-semibold ${
+                        item.status === 'cancelled'
+                          ? 'text-red-700'
+                          : item.status === 'completed'
+                            ? 'text-green-700'
+                            : item.status === 'pending'
+                              ? 'text-yellow-700'
+                              : 'text-blue-700'
+                      }`}
+                    >
+                      {ORDER_STATUS_LABEL[item.status]}
+                    </Typography>
+                  </View>
+                </View>
+
+                {item.order_items.map((line) => (
+                  <View key={line.id} className="flex-row items-center gap-3">
+                    <AppImage uri={line.image_url} className="h-12 w-12 rounded-xl" />
+                    <View className="flex-1">
+                      <Typography type="body-sm" numberOfLines={1} className="text-navy">
+                        {line.title}
+                      </Typography>
+                      <Typography type="body-xs" color="muted">
+                        {formatPrice(line.unit_price)} × {line.quantity}
+                      </Typography>
+                    </View>
+                  </View>
+                ))}
+
+                <View className="flex-row items-center justify-between">
+                  <Typography type="body-xs" color="muted">
+                    {item.recipient_name ?? ''} · {formatDateTime(item.created_at)}
+                  </Typography>
+                  <Typography
+                    type="body"
+                    className="text-brand-orange"
+                    style={{ fontWeight: '700' }}
+                  >
+                    {formatPrice(item.total)}
+                  </Typography>
+                </View>
+              </Pressable>
+
+              <LogisticsPanel order={item} role="seller" />
+
+              {item.status === 'pending' ? (
+                <Button
+                  size="sm"
+                  isDisabled={setStatus.isPending}
+                  onPress={() => advance(item.id, 'paid', '已標記為備貨中')}
+                >
+                  <Button.Label>確認款項，開始備貨</Button.Label>
+                </Button>
+              ) : null}
+              {item.status === 'paid' ? (
+                <Button
+                  size="sm"
+                  isDisabled={setStatus.isPending}
+                  onPress={() => advance(item.id, 'shipped', '已標記為出貨')}
+                >
+                  <Button.Label>標記已出貨</Button.Label>
+                </Button>
+              ) : null}
+              {item.status === 'pending' || item.status === 'paid' ? (
+                <Button
+                  size="sm"
+                  variant="danger-soft"
+                  isDisabled={setStatus.isPending}
+                  onPress={() => advance(item.id, 'cancelled', '訂單已取消')}
+                >
+                  <Button.Label>取消訂單</Button.Label>
+                </Button>
+              ) : null}
+            </View>
+          )}
+        />
+      )}
+
+      {/*
+       * 標題與篩選整塊浮在清單上面，往下滑就收起來。
+       * 一定要用絕對定位：如果留在版面流裡，收起來的高度會在清單上方留下一塊空白。
+       */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          transform: [{ translateY: headerTranslateY }],
+        }}
+        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
+        className="bg-surface"
+      >
+        <View className="pt-safe gap-3 px-4 pb-3">
+          <View className="pt-2">
+            <ScreenBackButton fallback="/seller" />
+            <Typography type="h4" className="text-navy mt-1" style={{ fontWeight: '700' }}>
+              訂單管理
+            </Typography>
+            <Typography type="body-sm" color="muted">
+              確認款項、出貨與貨態都在這裡
+            </Typography>
+          </View>
+
+          <SegmentedControl items={FILTERS} value={filter} onChange={setFilter} size="sm" />
+
+          <ShipmentStatusBar
+            orders={all}
+            value={shipment}
+            onChange={setShipment}
+            title="你建立的超商取貨物流單"
+          />
+
+          <View className="flex-row items-center justify-between gap-3">
+            <Typography type="body-xs" color="muted">
+              共 {formatNumber(filtered.length)} 筆
+              {narrowed ? `／全部 ${formatNumber(all.length)} 筆` : ''}
+            </Typography>
+            {narrowed ? (
+              <Pressable hitSlop={6} onPress={clearFilters}>
+                <Typography type="body-xs" className="text-brand-orange">
+                  清除條件
+                </Typography>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* 頂部區塊收起來之後，訂單會捲到狀態列底下；這塊同色的遮片把那一段蓋住。 */}
+      <View
+        pointerEvents="none"
+        className="bg-surface"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, zIndex: 11 }}
+      />
+    </View>
+  );
+}
