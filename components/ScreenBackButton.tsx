@@ -1,28 +1,29 @@
 import { Platform, Pressable, View } from 'react-native';
 import { Typography } from 'heroui-native';
 import { ChevronLeft } from 'lucide-react-native';
+import type { Href } from 'expo-router';
 
 import { BRAND } from '@/lib/brand';
-import { exitSellerMode } from '@/lib/mode';
+import { goBackOrReplace } from '@/lib/navigation';
 
 /**
- * 賣家分頁（首頁／訂單／訊息／我的）的返回鍵。
+ * 分頁畫面（買家與賣家兩邊都有）自己畫的返回鍵。
  *
- * 這四頁沒有頁首，所以返回鍵畫在內容的最上面；按下就把介面切回買家端，
- * 而不是退回上一頁 —— 分頁本身沒有「上一頁」可退。
+ * 分頁沒有系統頁首，所以返回鍵畫在內容最上面。按下先退回上一頁；如果這一頁是
+ * 直接開起來的（沒有上一頁可退），就退到該介面的首頁 fallback。
  */
-export function SellerExitButton({ label = '買家介面' }: { label?: string }) {
+export function ScreenBackButton({ fallback, label = '返回' }: { fallback: Href; label?: string }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="返回買家介面"
+      accessibilityLabel={label}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       className="-ml-1 self-start py-1"
       style={({ pressed }) => ({
         opacity: pressed ? 0.55 : 1,
         ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
       })}
-      onPress={exitSellerMode}
+      onPress={() => goBackOrReplace(fallback)}
     >
       <View className="flex-row items-center gap-0.5">
         <ChevronLeft size={20} color={BRAND.navy} />

@@ -9,6 +9,7 @@ import { AppImage } from '@/components/AppImage';
 import { EmptyState } from '@/components/EmptyState';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { RecommendationRail } from '@/components/RecommendationRail';
+import { ScreenBackButton } from '@/components/ScreenBackButton';
 import { SignInRequired } from '@/components/SignInRequired';
 import { useBulkTiers } from '@/lib/api/bulk';
 import {
@@ -32,7 +33,8 @@ function CartHeader({ subtitle }: { subtitle: string }) {
   return (
     <View className="bg-surface pt-safe px-4 pb-3">
       <View className="pt-2">
-        <Typography type="h4" className="text-navy" style={{ fontWeight: '700' }}>
+        <ScreenBackButton fallback="/" />
+        <Typography type="h4" className="text-navy mt-1" style={{ fontWeight: '700' }}>
           購物車
         </Typography>
         <Typography type="body-sm" color="muted">
@@ -120,14 +122,14 @@ export default function CartScreen() {
           <EmptyState
             icon={<ShoppingCart size={26} color={BRAND.blue} />}
             title="購物車還是空的"
-            description="逛逛極貨網，萬物皆品，極致首選。"
+            description="逛逛極貨網，找到你需要的商品。"
             action={
               <Button onPress={() => router.push('/products')}>
                 <Button.Label>開始探索</Button.Label>
               </Button>
             }
           />
-          <RecommendationRail title="智慧推薦" seedIds={recentlyViewed} limit={10} />
+          <RecommendationRail title="為你推薦" seedIds={recentlyViewed} limit={10} />
         </ScrollView>
       </View>
     );
@@ -242,7 +244,7 @@ export default function CartScreen() {
         {/* 湊單用的推薦：種子是購物車內容，所以會跟著購物車變。
             -mx-4 抵銷外層的 p-4，橫向列表才與上面的卡片同一條左邊界。 */}
         <View className="-mx-4">
-          <RecommendationRail title="智慧推薦" seedIds={cartSeeds} limit={10} />
+          <RecommendationRail title="為你推薦" seedIds={cartSeeds} limit={10} />
         </View>
       </ScrollView>
 

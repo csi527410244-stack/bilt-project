@@ -12,6 +12,7 @@ import {
   Package,
   Plus,
   Receipt,
+  Repeat,
   Settings,
   Star,
   Store as StoreIcon,
@@ -21,7 +22,7 @@ import {
 
 import { AppImage } from '@/components/AppImage';
 import { EmptyState } from '@/components/EmptyState';
-import { SellerExitButton } from '@/components/SellerExitButton';
+import { ScreenBackButton } from '@/components/ScreenBackButton';
 import { SignInRequired } from '@/components/SignInRequired';
 import { LinearGradient } from '@/components/ui/primitives/LinearGradient';
 import { useCoinSummary } from '@/lib/api/coins';
@@ -58,14 +59,14 @@ function MenuRow({
 }
 
 /**
- * 「我的」頁首：返回買家介面的按鈕 + 店鋪資料。店鋪還在載入時也照樣畫出來，
+ * 「我的」頁首：返回鍵 + 店鋪資料。店鋪還在載入時也照樣畫出來，
  * 頁首整塊消失只剩轉圈圈會讓人以為畫面壞了。
  */
 function AccountHeader({ children }: { children: ReactNode }) {
   return (
     <View className="bg-surface pt-safe px-4 pb-4">
       <View className="pt-2">
-        <SellerExitButton />
+        <ScreenBackButton fallback="/seller" />
       </View>
       <View className="mt-2 flex-row items-center gap-3">{children}</View>
     </View>
@@ -289,6 +290,34 @@ export default function SellerAccountScreen() {
             onPress={() => router.push('/seller/store')}
           />
         </View>
+
+        {/* 買家與賣家是兩套介面：切回買家端的入口放在這裡，各分頁不再放介面切換鍵。 */}
+        <Pressable
+          className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-4"
+          accessibilityRole="button"
+          accessibilityLabel="回到買家介面"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.9 : 1,
+            ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+          })}
+          onPress={exitSellerMode}
+        >
+          <View
+            className="h-10 w-10 items-center justify-center rounded-xl"
+            style={{ backgroundColor: BRAND.orangeSoft }}
+          >
+            <Repeat size={19} color={BRAND.orange} />
+          </View>
+          <View className="flex-1">
+            <Typography type="body" className="text-navy" style={{ fontWeight: '700' }}>
+              回到買家介面
+            </Typography>
+            <Typography type="body-xs" color="muted" numberOfLines={1}>
+              購物車、收藏與我的訂單都在那一邊
+            </Typography>
+          </View>
+          <ChevronRight size={18} color={BRAND.muted} />
+        </Pressable>
 
         <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
           <View className="flex-row items-center gap-3 px-4 py-3.5">

@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Typography } from 'heroui-native';
 
 import { ConversationList } from '@/components/ConversationList';
-import { SellerExitButton } from '@/components/SellerExitButton';
+import { ScreenBackButton } from '@/components/ScreenBackButton';
 import { SignInRequired } from '@/components/SignInRequired';
 import { useConversations } from '@/lib/api/social';
 import { useUserId } from '@/lib/session';
@@ -30,7 +30,7 @@ export default function SellerMessagesScreen() {
     <View className="bg-background flex-1">
       <View className="bg-surface pt-safe px-4 pb-3">
         <View className="pt-2">
-          <SellerExitButton />
+          <ScreenBackButton fallback="/seller" />
           <Typography type="h4" className="text-navy mt-1" style={{ fontWeight: '700' }}>
             買家訊息
           </Typography>

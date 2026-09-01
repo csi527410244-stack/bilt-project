@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react-native';
 
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { EmptyState } from '@/components/EmptyState';
+import { ScreenBackButton } from '@/components/ScreenBackButton';
 import { useCategories } from '@/lib/api/catalog';
 import { BRAND } from '@/lib/brand';
 import { formatNumber } from '@/lib/format';
@@ -29,7 +30,8 @@ export default function CategoriesScreen() {
     <View className="bg-background flex-1">
       <View className="bg-surface pt-safe px-4 pb-3">
         <View className="pt-2">
-          <Typography type="h4" className="text-navy" style={{ fontWeight: '700' }}>
+          <ScreenBackButton fallback="/" />
+          <Typography type="h4" className="text-navy mt-1" style={{ fontWeight: '700' }}>
             商品分類
           </Typography>
           <Typography type="body-sm" color="muted">

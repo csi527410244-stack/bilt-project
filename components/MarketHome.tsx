@@ -13,7 +13,6 @@ import { LaunchAdModal } from '@/components/LaunchAdModal';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductRail } from '@/components/ProductRail';
 import { RecommendationGrid } from '@/components/RecommendationGrid';
-import { SellerExitButton } from '@/components/SellerExitButton';
 import { LinearGradient } from '@/components/ui/primitives/LinearGradient';
 import { useFavoriteToggle } from '@/hooks/useFavoriteToggle';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -106,8 +105,6 @@ type Props = {
    * 不應該再被廣告攔一次。
    */
   showLaunchAd?: boolean;
-  /** 賣家介面在用這一頁時，頁首要多一顆回到買家介面的返回鍵。 */
-  showSellerExit?: boolean;
 };
 
 /**
@@ -116,7 +113,7 @@ type Props = {
  * 買家分頁的「首頁」與賣家介面的「市集」共用這一份內容 —— 買賣分開的是功能
  * （購物車、訂單、賣家中心），不是可以看到的商品。任何首頁區塊的調整只改這裡。
  */
-export function MarketHome({ showLaunchAd = true, showSellerExit = false }: Props) {
+export function MarketHome({ showLaunchAd = true }: Props) {
   const [query, setQuery] = useState('');
   const userId = useUserId();
   const { data: categories } = useCategories();
@@ -141,12 +138,6 @@ export function MarketHome({ showLaunchAd = true, showSellerExit = false }: Prop
     <View className="bg-background flex-1">
       {/* 固定的頁首只留品牌列與搜尋 —— 手機上再多一塊，商品區就會被推到看不見。 */}
       <View className="bg-surface pt-safe">
-        {showSellerExit ? (
-          <View className="px-4 pt-2">
-            <SellerExitButton />
-          </View>
-        ) : null}
-
         <View className="flex-row items-center px-2 pt-2 pb-1">
           <View className="flex-1 pl-2">
             <JihuoLogo size={34} showEn={false} />
@@ -257,9 +248,6 @@ export function MarketHome({ showLaunchAd = true, showSellerExit = false }: Prop
               <Typography type="h4" className="text-white" style={{ fontWeight: '700' }}>
                 {BRAND_COPY.bannerHeadline}
               </Typography>
-              <Typography type="body-sm" className="mt-2 text-white/85">
-                {BRAND_COPY.bannerHighlights}
-              </Typography>
               <Button
                 className="mt-4 self-start rounded-full bg-white"
                 size="sm"
@@ -271,15 +259,6 @@ export function MarketHome({ showLaunchAd = true, showSellerExit = false }: Prop
               </Button>
             </View>
           </LinearGradient>
-        </View>
-
-        <View className="mt-4 px-4">
-          <Typography type="h6" className="text-navy" style={{ fontWeight: '700' }}>
-            {BRAND_COPY.tagline}
-          </Typography>
-          <Typography type="body-sm" color="muted">
-            {BRAND_COPY.subTagline}
-          </Typography>
         </View>
 
         {/* 非對稱砌體布局: 1 大左 + 2 小右 + 全部分類 */}

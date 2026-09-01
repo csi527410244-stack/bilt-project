@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { LockKeyhole } from 'lucide-react-native';
 
 import { protectBrand } from '@/components/brand/BrandText';
-import { BRAND, BRAND_COPY } from '@/lib/brand';
+import { BRAND } from '@/lib/brand';
 
 type Props = {
   title?: string;
@@ -13,7 +13,7 @@ type Props = {
 
 export function SignInRequired({
   title = '請先登入極貨網',
-  description = BRAND_COPY.subTagline,
+  description = '登入後就能收藏商品、下單並追蹤訂單。',
 }: Props) {
   return (
     <View className="flex-1 items-center justify-center gap-4 px-8">

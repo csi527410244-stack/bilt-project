@@ -10,7 +10,7 @@ import { AppImage } from '@/components/AppImage';
 import { EmptyState } from '@/components/EmptyState';
 import { LogisticsPanel } from '@/components/LogisticsPanel';
 import { SegmentedControl, type Segment } from '@/components/SegmentedControl';
-import { SellerExitButton } from '@/components/SellerExitButton';
+import { ScreenBackButton } from '@/components/ScreenBackButton';
 import {
   matchesShipmentFilter,
   ShipmentStatusBar,
@@ -272,7 +272,7 @@ export default function SellerOrdersScreen() {
       >
         <View className="pt-safe gap-3 px-4 pb-3">
           <View className="pt-2">
-            <SellerExitButton />
+            <ScreenBackButton fallback="/seller" />
             <Typography type="h4" className="text-navy mt-1" style={{ fontWeight: '700' }}>
               訂單管理
             </Typography>

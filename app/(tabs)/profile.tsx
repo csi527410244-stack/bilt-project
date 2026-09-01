@@ -20,11 +20,12 @@ import {
   UserX,
 } from 'lucide-react-native';
 
+import { ScreenBackButton } from '@/components/ScreenBackButton';
 import { SignInRequired } from '@/components/SignInRequired';
 import { useMyStoreQuery } from '@/lib/api/seller';
 import { protectBrand } from '@/components/brand/BrandText';
 import { NoTranslate } from '@/components/brand/NoTranslate';
-import { BRAND, BRAND_COPY } from '@/lib/brand';
+import { BRAND } from '@/lib/brand';
 import { formatDate } from '@/lib/format';
 import { enterSellerMode } from '@/lib/mode';
 import { useIsAdminConsole, useSessionStore, useUserId } from '@/lib/session';
@@ -80,7 +81,7 @@ export default function ProfileScreen() {
   if (!userId) {
     return (
       <View className="bg-background pt-safe flex-1">
-        <SignInRequired title="登入極貨網" description={BRAND_COPY.subTagline} />
+        <SignInRequired title="登入極貨網" />
       </View>
     );
   }
@@ -91,7 +92,10 @@ export default function ProfileScreen() {
     <View className="bg-background flex-1">
       <ScrollView contentContainerClassName="pb-10">
         <View className="bg-surface pt-safe px-4 pb-5">
-          <View className="flex-row items-center gap-3 pt-4">
+          <View className="pt-2">
+            <ScreenBackButton fallback="/" />
+          </View>
+          <View className="mt-2 flex-row items-center gap-3">
             <Avatar size="lg" alt={profile?.display_name ?? '會員'}>
               {profile?.avatar_url ? <Avatar.Image source={{ uri: profile.avatar_url }} /> : null}
               <Avatar.Fallback />
