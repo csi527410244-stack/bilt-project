@@ -5,6 +5,7 @@ import { useBrandToast } from '@/components/brand/BrandToast';
 import {
   BellRing,
   CheckCircle2,
+  ChevronLeft,
   LifeBuoy,
   Megaphone,
   MessageCircle,
@@ -21,8 +22,10 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { PushDiagnosticsCard } from '@/components/PushDiagnosticsCard';
 import { SignInRequired } from '@/components/SignInRequired';
+import { SwipeToDelete } from '@/components/SwipeToDelete';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
+  useDeleteNotification,
   useMarkNotificationsRead,
   useNotificationPrefs,
   useNotifications,
@@ -30,6 +33,7 @@ import {
 } from '@/lib/api/social';
 import { BRAND } from '@/lib/brand';
 import { relativeTime } from '@/lib/format';
+import { goBackOrReplace } from '@/lib/navigation';
 import { openNotificationLink } from '@/lib/push';
 import { setAppBadgeCount } from '@/lib/pushToken';
 import { useUserId } from '@/lib/session';
@@ -83,6 +87,7 @@ export default function NotificationsScreen() {
   const { data: notifications, isLoading } = useNotifications(userId);
   const { data: prefs } = useNotificationPrefs(userId);
   const markRead = useMarkNotificationsRead();
+  const deleteNotification = useDeleteNotification();
   const updatePrefs = useUpdateNotificationPrefs();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { refreshing, onRefresh } = usePullToRefresh();
@@ -144,11 +149,29 @@ export default function NotificationsScreen() {
 
   return (
     <View className="bg-background flex-1">
-      <View className="bg-surface gap-3 px-4 py-3">
-        <View className="flex-row items-center justify-between gap-3">
-          <Typography type="body-sm" color="muted" className="flex-1">
-            {unreadCount > 0 ? `${unreadCount} 則未讀通知` : '沒有未讀通知'}
-          </Typography>
+      <View className="bg-surface gap-2 px-4 py-3">
+        <View className="flex-row items-center gap-2">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="返回"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="-ml-1 py-1"
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.55 : 1,
+              ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+            })}
+            onPress={() => goBackOrReplace('/(tabs)')}
+          >
+            <View className="flex-row items-center gap-0.5">
+              <ChevronLeft size={20} color={BRAND.navy} />
+              <Typography type="body-sm" className="text-navy" style={{ fontWeight: '600' }}>
+                返回
+              </Typography>
+            </View>
+          </Pressable>
+
+          <View className="flex-1" />
+
           {unreadCount > 0 ? (
             <Button size="sm" variant="secondary" onPress={() => markRead.mutate({ userId })}>
               <Button.Label>全部已讀</Button.Label>
@@ -163,6 +186,10 @@ export default function NotificationsScreen() {
             </View>
           </Button>
         </View>
+
+        <Typography type="body-sm" color="muted">
+          {unreadCount > 0 ? `${unreadCount} 則未讀通知` : '沒有未讀通知'} · 往左滑動可刪除通知
+        </Typography>
       </View>
 
       {isLoading ? (
@@ -191,37 +218,49 @@ export default function NotificationsScreen() {
             />
           }
           renderItem={({ item }) => (
-            <Pressable
-              className="bg-surface flex-row gap-3 rounded-2xl p-4"
-              onPress={() => {
-                if (!item.read) markRead.mutate({ userId, id: item.id });
-                // 標題 + 內文一起傳：賣家的訂單通知只帶「訂單管理」的連結，
-                // 訂單編號在文字裡，要靠它才能捲到相關的那一筆。
-                openNotificationLink(item.link, `${item.title} ${item.body}`);
-              }}
+            <SwipeToDelete
+              onDelete={() =>
+                deleteNotification.mutate(
+                  { userId, id: item.id },
+                  {
+                    onError: (error: Error) =>
+                      toast.show({ variant: 'danger', label: error.message }),
+                  },
+                )
+              }
             >
-              <View className="bg-brand-blue-soft h-9 w-9 items-center justify-center rounded-xl">
-                {iconFor(item.type)}
-              </View>
-              <View className="flex-1 gap-0.5">
-                <View className="flex-row items-center gap-2">
-                  <Typography
-                    type="body-sm"
-                    className="text-navy flex-1"
-                    style={{ fontWeight: '600' }}
-                  >
-                    {item.title}
-                  </Typography>
-                  {!item.read ? <View className="bg-brand-orange h-2 w-2 rounded-full" /> : null}
+              <Pressable
+                className="bg-surface flex-row gap-3 rounded-2xl p-4"
+                onPress={() => {
+                  if (!item.read) markRead.mutate({ userId, id: item.id });
+                  // 標題 + 內文一起傳：賣家的訂單通知只帶「訂單管理」的連結，
+                  // 訂單編號在文字裡，要靠它才能捲到相關的那一筆。
+                  openNotificationLink(item.link, `${item.title} ${item.body}`);
+                }}
+              >
+                <View className="bg-brand-blue-soft h-9 w-9 items-center justify-center rounded-xl">
+                  {iconFor(item.type)}
                 </View>
-                <Typography type="body-sm" color="muted">
-                  {item.body}
-                </Typography>
-                <Typography type="body-xs" color="muted">
-                  {relativeTime(item.created_at)}
-                </Typography>
-              </View>
-            </Pressable>
+                <View className="flex-1 gap-0.5">
+                  <View className="flex-row items-center gap-2">
+                    <Typography
+                      type="body-sm"
+                      className="text-navy flex-1"
+                      style={{ fontWeight: '600' }}
+                    >
+                      {item.title}
+                    </Typography>
+                    {!item.read ? <View className="bg-brand-orange h-2 w-2 rounded-full" /> : null}
+                  </View>
+                  <Typography type="body-sm" color="muted">
+                    {item.body}
+                  </Typography>
+                  <Typography type="body-xs" color="muted">
+                    {relativeTime(item.created_at)}
+                  </Typography>
+                </View>
+              </Pressable>
+            </SwipeToDelete>
           )}
         />
       )}

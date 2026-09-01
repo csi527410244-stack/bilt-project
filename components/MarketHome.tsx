@@ -13,6 +13,7 @@ import { LaunchAdModal } from '@/components/LaunchAdModal';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductRail } from '@/components/ProductRail';
 import { RecommendationGrid } from '@/components/RecommendationGrid';
+import { SellerExitButton } from '@/components/SellerExitButton';
 import { LinearGradient } from '@/components/ui/primitives/LinearGradient';
 import { useFavoriteToggle } from '@/hooks/useFavoriteToggle';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -105,6 +106,8 @@ type Props = {
    * 不應該再被廣告攔一次。
    */
   showLaunchAd?: boolean;
+  /** 賣家介面在用這一頁時，頁首要多一顆回到買家介面的返回鍵。 */
+  showSellerExit?: boolean;
 };
 
 /**
@@ -113,7 +116,7 @@ type Props = {
  * 買家分頁的「首頁」與賣家介面的「市集」共用這一份內容 —— 買賣分開的是功能
  * （購物車、訂單、賣家中心），不是可以看到的商品。任何首頁區塊的調整只改這裡。
  */
-export function MarketHome({ showLaunchAd = true }: Props) {
+export function MarketHome({ showLaunchAd = true, showSellerExit = false }: Props) {
   const [query, setQuery] = useState('');
   const userId = useUserId();
   const { data: categories } = useCategories();
@@ -136,7 +139,14 @@ export function MarketHome({ showLaunchAd = true }: Props) {
 
   return (
     <View className="bg-background flex-1">
+      {/* 固定的頁首只留品牌列與搜尋 —— 手機上再多一塊，商品區就會被推到看不見。 */}
       <View className="bg-surface pt-safe">
+        {showSellerExit ? (
+          <View className="px-4 pt-2">
+            <SellerExitButton />
+          </View>
+        ) : null}
+
         <View className="flex-row items-center px-2 pt-2 pb-1">
           <View className="flex-1 pl-2">
             <JihuoLogo size={34} showEn={false} />
@@ -170,7 +180,7 @@ export function MarketHome({ showLaunchAd = true }: Props) {
           </View>
         </View>
 
-        <View className="px-4 pt-1 pb-2">
+        <View className="px-4 pt-1 pb-3">
           <BrandGuard texts={[BRAND_COPY.searchPlaceholder]}>
             <SearchField value={query} onChange={setQuery}>
               <SearchField.Group className="rounded-full">
@@ -185,21 +195,6 @@ export function MarketHome({ showLaunchAd = true }: Props) {
             </SearchField>
           </BrandGuard>
         </View>
-
-        {/* 平台提醒橫幅 - 防詐騙警告 */}
-        <View className="mx-4 mt-2 mb-2 flex-row items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-          <AlertCircle size={16} color="#D97706" style={{ flexShrink: 0 }} />
-          <Typography
-            type="body-xs"
-            numberOfLines={2}
-            className="text-yellow-900"
-            style={{ fontWeight: '500', flex: 1 }}
-          >
-            💡 平台提醒：本平台完全免費、0%抽成！交易一律直連綠界，請防範私下匯款詐騙。
-          </Typography>
-        </View>
-
-        <HomeQuickLinks />
       </View>
 
       <ScrollView
@@ -214,7 +209,23 @@ export function MarketHome({ showLaunchAd = true }: Props) {
           />
         }
       >
-        <View className="px-4 pt-4">
+        {/* 平台提醒橫幅 - 防詐騙警告。跟著內容捲動，不佔固定頁首的高度。 */}
+        <View className="mx-4 mt-3 flex-row items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+          <AlertCircle size={16} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
+          <Typography
+            type="body-xs"
+            className="flex-1 leading-5 text-yellow-900"
+            style={{ fontWeight: '500' }}
+          >
+            平台提醒：本平台完全免費、0%抽成！交易一律直連綠界，請防範私下匯款詐騙。
+          </Typography>
+        </View>
+
+        <View className="mt-3">
+          <HomeQuickLinks />
+        </View>
+
+        <View className="px-4 pt-1">
           <LinearGradient
             colors={[BRAND.navy, '#0B3FA8', BRAND.blue]}
             start={{ x: 0, y: 0 }}
@@ -333,14 +344,13 @@ export function MarketHome({ showLaunchAd = true }: Props) {
             </View>
           </View>
 
-          {/* 第二行: 更多類別 + 全部分類按鈕 */}
-          <View className="mt-3 flex-row flex-wrap gap-2">
+          {/* 第二行: 更多類別 + 全部分類按鈕。固定四欄不換行，橘色按鈕才不會壓到旁邊的分類。 */}
+          <View className="mt-3 flex-row gap-2">
             {(categories ?? []).slice(2, 5).map((category) => (
               <Pressable
                 key={category.id}
-                className="bg-surface flex-1 items-center justify-center rounded-xl p-2.5"
+                className="bg-surface flex-1 items-center justify-center rounded-xl px-1.5 py-2.5"
                 style={{
-                  minWidth: '31%',
                   shadowColor: BRAND.blue,
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.04,
@@ -367,9 +377,8 @@ export function MarketHome({ showLaunchAd = true }: Props) {
             ))}
             {/* 全部分類快捷按鈕 */}
             <Pressable
-              className="bg-brand-orange flex-1 items-center justify-center rounded-xl p-2.5"
+              className="bg-brand-orange flex-1 items-center justify-center rounded-xl px-1.5 py-2.5"
               style={{
-                minWidth: '31%',
                 shadowColor: BRAND.orange,
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.1,

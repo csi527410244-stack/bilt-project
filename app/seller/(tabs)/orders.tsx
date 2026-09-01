@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Animated, FlatList, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Spinner, Typography } from 'heroui-native';
 import { useBrandToast } from '@/components/brand/BrandToast';
 import { router } from 'expo-router';
@@ -9,6 +10,7 @@ import { AppImage } from '@/components/AppImage';
 import { EmptyState } from '@/components/EmptyState';
 import { LogisticsPanel } from '@/components/LogisticsPanel';
 import { SegmentedControl, type Segment } from '@/components/SegmentedControl';
+import { SellerExitButton } from '@/components/SellerExitButton';
 import {
   matchesShipmentFilter,
   ShipmentStatusBar,
@@ -37,19 +39,22 @@ const FILTERS: Segment<StatusFilter>[] = [
 export default function SellerOrdersScreen() {
   const userId = useUserId();
   const { toast } = useBrandToast();
+  const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [shipment, setShipment] = useState<ShipmentFilter>('all');
   const { data: orders, isLoading } = useSellerOrders(userId);
   const setStatus = useSetOrderStatus();
   const listRef = useRef<FlatList<Order>>(null);
 
-  // 滑動隱藏頂部區塊的動畫
+  // 往下滑就把頂部區塊收起來，讓訂單卡片有更多高度。
   const scrollY = useRef(new Animated.Value(0)).current;
   const [headerHeight, setHeaderHeight] = useState(0);
 
+  // 還沒量到高度前 inputRange 不能是 [0, 0]，會讓 interpolate 失效。
+  const collapse = Math.max(1, headerHeight);
   const headerTranslateY = scrollY.interpolate({
-    inputRange: [0, headerHeight],
-    outputRange: [0, -headerHeight],
+    inputRange: [0, collapse],
+    outputRange: [0, -collapse],
     extrapolate: 'clamp',
   });
 
@@ -95,57 +100,6 @@ export default function SellerOrdersScreen() {
 
   return (
     <View className="bg-background flex-1">
-      <Animated.View
-        style={{
-          transform: [{ translateY: headerTranslateY }],
-          zIndex: 10,
-          overflow: 'hidden',
-        }}
-        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
-        className="bg-surface pt-safe px-4"
-      >
-        <View className="pt-2 pb-1">
-          <Typography type="h4" className="text-navy" style={{ fontWeight: '700' }}>
-            訂單管理
-          </Typography>
-          <Typography type="body-sm" color="muted">
-            確認款項、出貨與貨態都在這裡
-          </Typography>
-        </View>
-      </Animated.View>
-
-      <Animated.View
-        style={{
-          transform: [{ translateY: headerTranslateY }],
-          zIndex: 10,
-          overflow: 'hidden',
-        }}
-        className="bg-surface gap-3 px-4 py-3"
-      >
-        <SegmentedControl items={FILTERS} value={filter} onChange={setFilter} size="sm" />
-
-        <ShipmentStatusBar
-          orders={all}
-          value={shipment}
-          onChange={setShipment}
-          title="你建立的超商取貨物流單"
-        />
-
-        <View className="flex-row items-center justify-between gap-3">
-          <Typography type="body-xs" color="muted">
-            共 {formatNumber(filtered.length)} 筆
-            {narrowed ? `／全部 ${formatNumber(all.length)} 筆` : ''}
-          </Typography>
-          {narrowed ? (
-            <Pressable hitSlop={6} onPress={clearFilters}>
-              <Typography type="body-xs" className="text-brand-orange">
-                清除條件
-              </Typography>
-            </Pressable>
-          ) : null}
-        </View>
-      </Animated.View>
-
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
           <Spinner />
@@ -156,7 +110,13 @@ export default function SellerOrdersScreen() {
           className="flex-1"
           data={filtered}
           keyExtractor={(item) => item.id}
-          contentContainerClassName="p-4 gap-3 pb-6"
+          /* 頂部區塊是浮在清單上的，所以第一張卡片要自己讓開它的高度。 */
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingTop: headerHeight + 16,
+            paddingBottom: 24,
+            gap: 12,
+          }}
           scrollEventThrottle={16}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
             useNativeDriver: false,
@@ -293,6 +253,65 @@ export default function SellerOrdersScreen() {
           )}
         />
       )}
+
+      {/*
+       * 標題與篩選整塊浮在清單上面，往下滑就收起來。
+       * 一定要用絕對定位：如果留在版面流裡，收起來的高度會在清單上方留下一塊空白。
+       */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          transform: [{ translateY: headerTranslateY }],
+        }}
+        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
+        className="bg-surface"
+      >
+        <View className="pt-safe gap-3 px-4 pb-3">
+          <View className="pt-2">
+            <SellerExitButton />
+            <Typography type="h4" className="text-navy mt-1" style={{ fontWeight: '700' }}>
+              訂單管理
+            </Typography>
+            <Typography type="body-sm" color="muted">
+              確認款項、出貨與貨態都在這裡
+            </Typography>
+          </View>
+
+          <SegmentedControl items={FILTERS} value={filter} onChange={setFilter} size="sm" />
+
+          <ShipmentStatusBar
+            orders={all}
+            value={shipment}
+            onChange={setShipment}
+            title="你建立的超商取貨物流單"
+          />
+
+          <View className="flex-row items-center justify-between gap-3">
+            <Typography type="body-xs" color="muted">
+              共 {formatNumber(filtered.length)} 筆
+              {narrowed ? `／全部 ${formatNumber(all.length)} 筆` : ''}
+            </Typography>
+            {narrowed ? (
+              <Pressable hitSlop={6} onPress={clearFilters}>
+                <Typography type="body-xs" className="text-brand-orange">
+                  清除條件
+                </Typography>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* 頂部區塊收起來之後，訂單會捲到狀態列底下；這塊同色的遮片把那一段蓋住。 */}
+      <View
+        pointerEvents="none"
+        className="bg-surface"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, zIndex: 11 }}
+      />
     </View>
   );
 }

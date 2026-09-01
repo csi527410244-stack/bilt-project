@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
-import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Avatar, Button, Spinner, Typography } from 'heroui-native';
-import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import {
   BarChart3,
@@ -11,16 +10,20 @@ import {
   LogOut,
   Megaphone,
   Package,
-  Repeat,
+  Plus,
+  Receipt,
   Settings,
+  Star,
   Store as StoreIcon,
+  Ticket,
   UserCog,
-  Trash2,
 } from 'lucide-react-native';
 
 import { AppImage } from '@/components/AppImage';
 import { EmptyState } from '@/components/EmptyState';
+import { SellerExitButton } from '@/components/SellerExitButton';
 import { SignInRequired } from '@/components/SignInRequired';
+import { LinearGradient } from '@/components/ui/primitives/LinearGradient';
 import { useCoinSummary } from '@/lib/api/coins';
 import { useMyStoreQuery, useSellerDashboard } from '@/lib/api/seller';
 import { protectBrand } from '@/components/brand/BrandText';
@@ -54,37 +57,17 @@ function MenuRow({
   );
 }
 
-async function clearNotifications() {
-  await Notifications.dismissAllNotificationsAsync();
-}
-
 /**
- * 「我的」頁首。店鋪資料還在載入時也照樣畫出來（含切回買家介面的出口與清除推送訊息），
+ * 「我的」頁首：返回買家介面的按鈕 + 店鋪資料。店鋪還在載入時也照樣畫出來，
  * 頁首整塊消失只剩轉圈圈會讓人以為畫面壞了。
  */
 function AccountHeader({ children }: { children: ReactNode }) {
   return (
-    <View className="bg-surface pt-safe px-4 pb-5">
-      <View className="flex-row items-center gap-3 pt-3">{children}</View>
-
-      <View className="mt-4 flex-row gap-2">
-        <Button variant="secondary" size="sm" className="flex-1" onPress={exitSellerMode}>
-          <View className="flex-row items-center gap-1.5">
-            <Repeat size={14} color={BRAND.navy} />
-            <Typography type="body-sm" className="text-navy" style={{ fontWeight: '600' }}>
-              切換回買家介面
-            </Typography>
-          </View>
-        </Button>
-        <Button variant="secondary" size="sm" className="flex-1" onPress={clearNotifications}>
-          <View className="flex-row items-center gap-1.5">
-            <Trash2 size={14} color={BRAND.navy} />
-            <Typography type="body-sm" className="text-navy" style={{ fontWeight: '600' }}>
-              清除推送訊息
-            </Typography>
-          </View>
-        </Button>
+    <View className="bg-surface pt-safe px-4 pb-4">
+      <View className="pt-2">
+        <SellerExitButton />
       </View>
+      <View className="mt-2 flex-row items-center gap-3">{children}</View>
     </View>
   );
 }
@@ -100,7 +83,7 @@ function StoreThumbFallback() {
   );
 }
 
-/** 賣家介面的「我的」：店鋪、本月營收、推廣與帳號設定，並提供切回買家介面的出口。 */
+/** 賣家介面的「我的」：店鋪、本月營收、上架捷徑、J幣與各項管理入口。 */
 export default function SellerAccountScreen() {
   const userId = useUserId();
   const profile = useSessionStore((s) => s.profile);
@@ -187,6 +170,55 @@ export default function SellerAccountScreen() {
           </Pressable>
         </AccountHeader>
 
+        {/* 本月營收：點進去是綠界廠商後台，款項與對帳都在那裡看。 */}
+        {!statsLoading && stats ? (
+          <Pressable
+            className="bg-surface mx-4 mt-3 flex-row items-center justify-between gap-3 rounded-2xl px-4 py-3.5"
+            onPress={() => Linking.openURL('https://ecpay.com.tw')}
+          >
+            <View>
+              <Typography type="body-xs" color="muted">
+                本月營收
+              </Typography>
+              <Typography type="h6" className="text-navy" style={{ fontWeight: '700' }}>
+                {formatPrice(stats.monthRevenue ?? 0)}
+              </Typography>
+            </View>
+            <View className="items-end">
+              <Typography type="body-xs" color="muted">
+                商品 / 待處理訂單
+              </Typography>
+              <Typography type="h6" className="text-navy" style={{ fontWeight: '700' }}>
+                {formatNumber(stats.productCount ?? 0)} / {formatNumber(stats.pendingOrders ?? 0)}
+              </Typography>
+            </View>
+          </Pressable>
+        ) : null}
+
+        {/* 上架商品是賣家最常做的事，所以獨立成一顆大按鈕。 */}
+        <Pressable
+          className="mx-4 mt-3 overflow-hidden rounded-2xl"
+          accessibilityRole="button"
+          accessibilityLabel="新增商品"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.9 : 1,
+            ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
+          })}
+          onPress={() => router.push('/seller/new-product')}
+        >
+          <LinearGradient
+            colors={[BRAND.orange, BRAND.yellow]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            className="flex-row items-center justify-center gap-2 py-4"
+          >
+            <Plus size={20} color={BRAND.white} strokeWidth={2.8} />
+            <Typography type="body" className="text-white" style={{ fontWeight: '700' }}>
+              新增商品
+            </Typography>
+          </LinearGradient>
+        </Pressable>
+
         <Pressable
           className="bg-surface mx-4 mt-3 flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
           onPress={() => router.push('/seller/coins')}
@@ -206,34 +238,19 @@ export default function SellerAccountScreen() {
               {formatNumber(coins?.wallet.balance ?? 0)}
             </Typography>
           </View>
-          <ChevronRight size={18} color={BRAND.muted} />
-        </Pressable>
-
-        {/* 本月營收卡片 - 點擊時導到綠界官方廠商後台 */}
-        {!statsLoading && stats ? (
           <Pressable
-            className="bg-surface mx-4 mt-3 flex-row items-center justify-between rounded-2xl px-4 py-3.5"
-            onPress={() => Linking.openURL('https://ecpay.com.tw')}
+            className="flex-row items-center"
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="賺幣換曝光"
+            onPress={() => router.push('/seller/promote')}
           >
-            <View>
-              <Typography type="body-xs" color="muted">
-                本月營收
-              </Typography>
-              <Typography type="body" className="text-navy" style={{ fontWeight: '700' }}>
-                {formatPrice(stats.monthRevenue ?? 0)}
-              </Typography>
-            </View>
-            <View className="items-end">
-              <Typography type="body-xs" color="muted">
-                商品 / 待處理訂單
-              </Typography>
-              <Typography type="body" className="text-navy" style={{ fontWeight: '700' }}>
-                {formatNumber(stats.productCount ?? 0)} / {formatNumber(stats.pendingOrders ?? 0)}
-              </Typography>
-            </View>
-            <ChevronRight size={18} color={BRAND.muted} />
+            <Typography type="body-sm" className="text-brand-orange" style={{ fontWeight: '600' }}>
+              賺幣換曝光
+            </Typography>
+            <ChevronRight size={16} color={BRAND.orange} />
           </Pressable>
-        ) : null}
+        </Pressable>
 
         <View className="bg-surface mx-4 mt-3 overflow-hidden rounded-2xl">
           <MenuRow
@@ -242,9 +259,24 @@ export default function SellerAccountScreen() {
             onPress={() => router.push('/seller/products')}
           />
           <MenuRow
+            icon={<Receipt size={18} color={BRAND.blue} />}
+            title="訂單管理"
+            onPress={() => router.navigate('/seller/orders')}
+          />
+          <MenuRow
+            icon={<Ticket size={18} color={BRAND.blue} />}
+            title="優惠券與折扣碼"
+            onPress={() => router.push('/seller/coupons')}
+          />
+          <MenuRow
             icon={<BarChart3 size={18} color={BRAND.blue} />}
             title="銷售分析"
             onPress={() => router.push('/seller/analytics')}
+          />
+          <MenuRow
+            icon={<Star size={18} color={BRAND.blue} />}
+            title="買家評價與回覆"
+            onPress={() => router.push('/seller/reviews')}
           />
           <MenuRow
             icon={<Megaphone size={18} color={BRAND.blue} />}

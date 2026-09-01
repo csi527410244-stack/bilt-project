@@ -181,6 +181,43 @@ export function useMarkNotificationsRead() {
   });
 }
 
+/**
+ * 刪掉一則通知（通知中心往左滑動 → 刪除）。
+ *
+ * 先把它從快取裡拿掉，卡片才會跟著手勢立刻消失；失敗時再放回去並照原本的順序重讀。
+ */
+export function useDeleteNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { userId: string; id: string }) => {
+      const { error } = await bilt
+        .from('notifications')
+        .delete()
+        .eq('id', input.id)
+        .eq('user_id', input.userId);
+      if (error) throw new Error(error.message);
+    },
+    onMutate: async (input) => {
+      const key = ['notifications', input.userId];
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<AppNotification[]>(key);
+      qc.setQueryData<AppNotification[]>(key, (rows) =>
+        (rows ?? []).filter((row) => row.id !== input.id),
+      );
+      return { previous };
+    },
+    onError: (_error, input, context) => {
+      if (context?.previous) {
+        qc.setQueryData(['notifications', input.userId], context.previous);
+      }
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['notifications'] });
+      void qc.invalidateQueries({ queryKey: ['notifications-unread'] });
+    },
+  });
+}
+
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({

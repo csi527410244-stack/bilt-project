@@ -11,7 +11,7 @@ import { MarketHome } from '@/components/MarketHome';
 export default function SellerMarketScreen() {
   return (
     <View className="bg-background flex-1">
-      <MarketHome showLaunchAd={false} />
+      <MarketHome showLaunchAd={false} showSellerExit />
     </View>
   );
 }
