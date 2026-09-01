@@ -4,9 +4,9 @@
 
 ## Project info
 
-**Project URL**: https://app.bilt.me/agent/3d19136d-6931-419d-aab4-92d1e1618fb3
+**Preview URL**: https://app.bilt.me/project/270044be-210b-4a5b-acb3-ee9bb70d9d90/preview
 
-**Project ID**: `3d19136d-6931-419d-aab4-92d1e1618fb3`
+**Project ID**: `270044be-210b-4a5b-acb3-ee9bb70d9d90`
 
 ## How can I edit this app?
 
@@ -14,7 +14,7 @@ There are several ways of editing your application.
 
 **Use Bilt**
 
-Simply visit your [Bilt Project](https://app.bilt.me/agent/3d19136d-6931-419d-aab4-92d1e1618fb3) and start sending messages. Describe what you want to change, add, or fix in natural language.
+Simply visit your [Bilt Project](https://app.bilt.me/agent/270044be-210b-4a5b-acb3-ee9bb70d9d90) and start sending messages. Describe what you want to change, add, or fix in natural language.
 
 Changes made via Bilt are instant - just send a message and your app updates.
 
@@ -71,11 +71,11 @@ All generated automatically by Bilt from your natural language instructions.
 
 ## How can I test this project?
 
-**Option 1: Preview in Bilt (Recommended)**
+**Option 1: Instant Preview (Recommended)**
 
-Open your [Bilt Project](https://app.bilt.me/agent/3d19136d-6931-419d-aab4-92d1e1618fb3) and use the built-in preview.
+Open the preview URL in your browser: `https://app.bilt.me/project/270044be-210b-4a5b-acb3-ee9bb70d9d90/preview`
 
-Open **Deploy & Share** to create a revocable preview link or build the app on your iPhone.
+Scan the QR code with Expo Go ([iOS](https://apps.apple.com/app/expo-go/id982107779) | [Android](https://play.google.com/store/apps/details?id=host.exp.exponent)) on your phone.
 
 **Option 2: Run Locally**
 
@@ -88,17 +88,19 @@ Then scan the QR code with Expo Go.
 
 ## How can I deploy this project?
 
-Open your [Bilt Project](https://app.bilt.me/agent/3d19136d-6931-419d-aab4-92d1e1618fb3), select **Deploy & Share**, then choose **Publish to web**, **Release on App Store**, or **Release on Play Store**.
+Go to your [Bilt Project](https://app.bilt.me/agent/270044be-210b-4a5b-acb3-ee9bb70d9d90), after that go to Settings -> App Store.
 
 ### Deploy with Bilt
 
-Publishing to web creates a public, installable web app at its own URL. Bilt also guides you through preparing native releases for the App Store and Play Store.
+Simply send a message to your Bilt project: "Deploy this app to production"
+
+Bilt will handle the build and provide you with download links or submission-ready builds.
 
 ## How can I make changes to my app?
 
 **Via Bilt (Easiest)**
 
-Visit your [Bilt Project](https://app.bilt.me/agent/3d19136d-6931-419d-aab4-92d1e1618fb3) and send a message describing what you want:
+Visit your [Bilt Project](https://app.bilt.me/agent/270044be-210b-4a5b-acb3-ee9bb70d9d90) and send a message describing what you want:
 
 - "Add a dark mode toggle"
 - "Change the button color to blue"
